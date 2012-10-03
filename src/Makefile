@@ -57,13 +57,13 @@ endif
 
 CC=gcc
 CXX=g++
-LD=$(CXX) $(OPT) $(MARCH)
-INCLUDE=-I. -Icore $(EXR_INCLUDES) $(TIFF_INCLUDES)
+LD=$(CXX) $(OPT) $(MARCH) 
+INCLUDE=-I. -Icore $(EXR_INCLUDES) $(TIFF_INCLUDES) -I/usr/include/gsl -I/usr/lib/
 WARN=-Wall
 CWD=$(shell pwd)
 CXXFLAGS=$(OPT) $(MARCH) $(INCLUDE) $(WARN) $(DEFS)
 CCFLAGS=$(CXXFLAGS)
-LIBS=$(LEXLIB) $(EXR_LIBDIR) $(EXRLIBS) -lm 
+LIBS=$(LEXLIB) $(EXR_LIBDIR) $(EXRLIBS)  -L/usr/lib/ -lgsl -lgslcblas -lm 
 
 LIBSRCS=$(wildcard core/*.cpp) core/pbrtlex.cpp core/pbrtparse.cpp
 LIBSRCS += $(wildcard accelerators/*.cpp cameras/*.cpp film/*.cpp filters/*.cpp )
@@ -71,7 +71,6 @@ LIBSRCS += $(wildcard integrators/*.cpp lights/*.cpp materials/*.cpp renderers/*
 LIBSRCS += $(wildcard samplers/*.cpp shapes/*.cpp textures/*.cpp volumes/*.cpp)
 
 LIBOBJS=$(addprefix objs/, $(subst /,_,$(LIBSRCS:.cpp=.o)))
-
 HEADERS = $(wildcard */*.h)
 
 TOOLS = bin/bsdftest bin/exravg bin/exrdiff

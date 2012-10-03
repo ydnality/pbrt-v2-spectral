@@ -8,6 +8,7 @@
 #include "pbrt.h"
 #include "camera.h"
 #include "film.h"
+#include <gsl/gsl_randist.h>
 
 struct LensElement{
     float radius;
@@ -33,6 +34,7 @@ private:
    float ShutterClose;
    float filmDiag;
    float filmDistance;
+    gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
    bool IntersectLensEl(const Ray &r, float *tHit, float radius, float dist,  Vector & normalVec) const
