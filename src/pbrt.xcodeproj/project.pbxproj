@@ -128,6 +128,7 @@
 		B1D8ECC71170310E00A8A49E /* homogeneous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1D8EC791170310E00A8A49E /* homogeneous.cpp */; };
 		B1D8ECC81170310E00A8A49E /* volumegrid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */; };
 		B1E1BB3F1177B63E00337ECE /* pbrtparse.yy in Sources */ = {isa = PBXBuildFile; fileRef = B1D8EB92117030F200A8A49E /* pbrtparse.yy */; };
+		B5CEBF3415B8BC6500F6930F /* realistic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5CEBF3215B8BC6500F6930F /* realistic.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -411,6 +412,9 @@
 		B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = volumegrid.cpp; path = volumes/volumegrid.cpp; sourceTree = SOURCE_ROOT; };
 		B1D8EC7C1170310E00A8A49E /* volumegrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = volumegrid.h; path = volumes/volumegrid.h; sourceTree = SOURCE_ROOT; };
 		B1D8ECE2117032E500A8A49E /* pbrt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pbrt; sourceTree = BUILT_PRODUCTS_DIR; };
+		B5CEBF3215B8BC6500F6930F /* realistic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = realistic.cpp; sourceTree = "<group>"; };
+		B5CEBF3315B8BC6500F6930F /* realistic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = realistic.h; sourceTree = "<group>"; };
+		B5CEBF3715B8BCC000F6930F /* pbrtparse.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pbrtparse.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -479,6 +483,8 @@
 		B1D8EB5D117030E500A8A49E /* cameras */ = {
 			isa = PBXGroup;
 			children = (
+				B5CEBF3215B8BC6500F6930F /* realistic.cpp */,
+				B5CEBF3315B8BC6500F6930F /* realistic.h */,
 				B1D8EB5E117030E500A8A49E /* environment.cpp */,
 				B1D8EB5F117030E500A8A49E /* environment.h */,
 				B1D8EB60117030E500A8A49E /* orthographic.cpp */,
@@ -492,6 +498,7 @@
 		B1D8EB67117030F200A8A49E /* core */ = {
 			isa = PBXGroup;
 			children = (
+				B5CEBF3715B8BCC000F6930F /* pbrtparse.hpp */,
 				B130248C1236EE5100206AC7 /* fileutil.cpp */,
 				B130248D1236EE5100206AC7 /* fileutil.h */,
 				B154B21412001D29009551FC /* stdafx.h */,
@@ -841,7 +848,11 @@
 			isa = PBXProject;
 			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "pbrt" */;
 			compatibilityVersion = "Xcode 3.1";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
 			mainGroup = 08FB7794FE84155DC02AAC07 /* pbrt */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -977,6 +988,7 @@
 				B1E1BB3F1177B63E00337ECE /* pbrtparse.yy in Sources */,
 				B19397BB12083210008317C5 /* shinymetal.cpp in Sources */,
 				B130248E1236EE5100206AC7 /* fileutil.cpp in Sources */,
+				B5CEBF3415B8BC6500F6930F /* realistic.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
