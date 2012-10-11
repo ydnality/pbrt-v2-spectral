@@ -70,19 +70,28 @@ void SamplerRendererTask::Run() {
     // Allocate space for samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
     Sample *samples = origSample->Duplicate(maxSamples);
-    RayDifferential *rays = new RayDifferential[maxSamples];
+    RayDifferential *rays = new RayDifferential[maxSamples];  //Andy changed... to use Spectral Ray Differential!
     Spectrum *Ls = new Spectrum[maxSamples];
     Spectrum *Ts = new Spectrum[maxSamples];
     Intersection *isects = new Intersection[maxSamples];
 
     // Get samples from _Sampler_ and update image
     int sampleCount;
-    while ((sampleCount = sampler->GetMoreSamples(samples, rng)) > 0) {
+    while ((sampleCount = sampler->GetMoreSamples(samples, rng)) > 0) {  //Andy plan: loop through all wavelengths.
         // Generate camera rays and compute radiance along rays
         for (int i = 0; i < sampleCount; ++i) {
             // Find camera ray for _sample[i]_
+rays[i].wavelength = 550.f; 
+//std::cout << "rayWavelength: " << rays[i].wavelength << "\n";
             PBRT_STARTED_GENERATING_CAMERA_RAY(&samples[i]);
-            float rayWeight = camera->GenerateRayDifferential(samples[i], &rays[i]);
+     
+            float rayWeight = camera->GenerateRayDifferential(samples[i], &rays[i]);  //Andy plan: give each ray a wavelength.  Rays with different wavelengths will be processed differently
+            
+
+            //Andy added for spectral 
+                  
+            //std::cout << "got here";
+
             rays[i].ScaleDifferentials(1.f / sqrtf(sampler->samplesPerPixel));
             PBRT_FINISHED_GENERATING_CAMERA_RAY(&samples[i], &rays[i], rayWeight);
 
@@ -142,6 +151,8 @@ void SamplerRendererTask::Run() {
 
         // Free _MemoryArena_ memory from computing image sample values
         arena.FreeAll();
+
+        // Andy plan: at the end of this section, assign each wavelength properly
     }
 
     // Clean up after _SamplerRendererTask_ is done with its image region
@@ -237,6 +248,9 @@ Spectrum SamplerRenderer::Li(const Scene *scene,
     }
     Spectrum Lvi = volumeIntegrator->Li(scene, this, ray, sample, rng,
                                         T, arena);
+
+        
+
     return *T * Li + Lvi;
 }
 
