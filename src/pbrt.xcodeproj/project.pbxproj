@@ -415,7 +415,7 @@
 		B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = volumegrid.cpp; path = volumes/volumegrid.cpp; sourceTree = SOURCE_ROOT; };
 		B1D8EC7C1170310E00A8A49E /* volumegrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = volumegrid.h; path = volumes/volumegrid.h; sourceTree = SOURCE_ROOT; };
 		B1D8ECE2117032E500A8A49E /* pbrt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pbrt; sourceTree = BUILT_PRODUCTS_DIR; };
-		B5757C22162725C9003E31A0 /* GSL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GSL.framework; path = /Library/Frameworks/GSL.framework; sourceTree = "<absolute>"; };
+		B5757C22162725C9003E31A0 /* GSL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; name = GSL.framework; path = ../Library/Frameworks/GSL.framework; sourceTree = DEVELOPER_DIR; };
 		B5757C28162726C0003E31A0 /* anisoward.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = anisoward.cpp; sourceTree = "<group>"; };
 		B5757C29162726C0003E31A0 /* anisoward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = anisoward.h; sourceTree = "<group>"; };
 		B5757C2A162726C0003E31A0 /* AnisoWardBrdf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AnisoWardBrdf.cpp; sourceTree = "<group>"; };
@@ -822,8 +822,9 @@
 				B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */,
 				B1D8EC7C1170310E00A8A49E /* volumegrid.h */,
 			);
-			path = volumes;
-			sourceTree = SOURCE_ROOT;
+			name = volumes;
+			path = "../../../Users/ben/Documents/Projects/pbrt-multi/pbrt-v2-spectral/src/volumes";
+			sourceTree = SDKROOT;
 		};
 		C6859E8C029090F304C91782 /* Documentation */ = {
 			isa = PBXGroup;
@@ -862,6 +863,7 @@
 			isa = PBXProject;
 			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "pbrt" */;
 			compatibilityVersion = "Xcode 3.1";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				en,
