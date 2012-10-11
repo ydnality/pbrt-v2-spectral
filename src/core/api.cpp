@@ -42,7 +42,7 @@
 #include "cameras/orthographic.h"
 #include "cameras/perspective.h"
 #include "cameras/realistic.h"
-#include "cameras/perspectiveDiffraction.h"
+//#include "cameras/perspectiveDiffraction.h"
 #include "film/image.h"
 #include "filters/box.h"
 #include "filters/gaussian.h"
@@ -601,8 +601,8 @@ Camera *MakeCamera(const string &name,
         cam2world[1], transformEnd);
     if (name == "perspective")
         camera = CreatePerspectiveCamera(paramSet, animatedCam2World, film);
-    else if (name == "perspectiveDiffraction")  //Andy added for diffraction for theoretical lenses
-        camera = CreatePerspectiveDiffractionCamera(paramSet, animatedCam2World, film);
+    //else if (name == "perspectiveDiffraction")  //Andy added for diffraction for theoretical lenses
+    //    camera = CreatePerspectiveDiffractionCamera(paramSet, animatedCam2World, film);
     else if (name == "orthographic")
         camera = CreateOrthographicCamera(paramSet, animatedCam2World, film);
     else if (name == "environment")

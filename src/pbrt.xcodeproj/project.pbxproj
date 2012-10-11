@@ -129,6 +129,8 @@
 		B1D8ECC81170310E00A8A49E /* volumegrid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */; };
 		B1E1BB3F1177B63E00337ECE /* pbrtparse.yy in Sources */ = {isa = PBXBuildFile; fileRef = B1D8EB92117030F200A8A49E /* pbrtparse.yy */; };
 		B5757C23162725C9003E31A0 /* GSL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B5757C22162725C9003E31A0 /* GSL.framework */; };
+		B5757C2C162726C0003E31A0 /* anisoward.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5757C28162726C0003E31A0 /* anisoward.cpp */; };
+		B5757C2D162726C0003E31A0 /* AnisoWardBrdf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5757C2A162726C0003E31A0 /* AnisoWardBrdf.cpp */; };
 		B5CEBF3415B8BC6500F6930F /* realistic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5CEBF3215B8BC6500F6930F /* realistic.cpp */; };
 /* End PBXBuildFile section */
 
@@ -414,6 +416,10 @@
 		B1D8EC7C1170310E00A8A49E /* volumegrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = volumegrid.h; path = volumes/volumegrid.h; sourceTree = SOURCE_ROOT; };
 		B1D8ECE2117032E500A8A49E /* pbrt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pbrt; sourceTree = BUILT_PRODUCTS_DIR; };
 		B5757C22162725C9003E31A0 /* GSL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GSL.framework; path = /Library/Frameworks/GSL.framework; sourceTree = "<absolute>"; };
+		B5757C28162726C0003E31A0 /* anisoward.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = anisoward.cpp; sourceTree = "<group>"; };
+		B5757C29162726C0003E31A0 /* anisoward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = anisoward.h; sourceTree = "<group>"; };
+		B5757C2A162726C0003E31A0 /* AnisoWardBrdf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AnisoWardBrdf.cpp; sourceTree = "<group>"; };
+		B5757C2B162726C0003E31A0 /* AnisoWardBrdf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AnisoWardBrdf.h; sourceTree = "<group>"; };
 		B5CEBF3215B8BC6500F6930F /* realistic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = realistic.cpp; sourceTree = "<group>"; };
 		B5CEBF3315B8BC6500F6930F /* realistic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = realistic.h; sourceTree = "<group>"; };
 		B5CEBF3715B8BCC000F6930F /* pbrtparse.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pbrtparse.hpp; sourceTree = "<group>"; };
@@ -677,6 +683,10 @@
 		B1D8EC151170310E00A8A49E /* materials */ = {
 			isa = PBXGroup;
 			children = (
+				B5757C28162726C0003E31A0 /* anisoward.cpp */,
+				B5757C29162726C0003E31A0 /* anisoward.h */,
+				B5757C2A162726C0003E31A0 /* AnisoWardBrdf.cpp */,
+				B5757C2B162726C0003E31A0 /* AnisoWardBrdf.h */,
 				B19397B912083210008317C5 /* shinymetal.cpp */,
 				B19397BA12083210008317C5 /* shinymetal.h */,
 				B1D8EC161170310E00A8A49E /* glass.cpp */,
@@ -992,6 +1002,8 @@
 				B19397BB12083210008317C5 /* shinymetal.cpp in Sources */,
 				B130248E1236EE5100206AC7 /* fileutil.cpp in Sources */,
 				B5CEBF3415B8BC6500F6930F /* realistic.cpp in Sources */,
+				B5757C2C162726C0003E31A0 /* anisoward.cpp in Sources */,
+				B5757C2D162726C0003E31A0 /* AnisoWardBrdf.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
