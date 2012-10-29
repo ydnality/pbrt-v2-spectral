@@ -70,32 +70,34 @@ void SamplerRendererTask::Run() {
     // Allocate space for samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
     Sample *samples = origSample->Duplicate(maxSamples);
-    RayDifferential *rays = new RayDifferential[maxSamples];  //Andy changed... to use Spectral Ray Differential!
+    RayDifferential *rays = new RayDifferential[maxSamples];
     Spectrum *Ls = new Spectrum[maxSamples];
     Spectrum *Ts = new Spectrum[maxSamples];
     Intersection *isects = new Intersection[maxSamples];
 
     // Get samples from _Sampler_ and update image
     int sampleCount;
-    while ((sampleCount = sampler->GetMoreSamples(samples, rng)) > 0) {  //Andy plan: loop through all wavelengths.
+    while ((sampleCount = sampler->GetMoreSamples(samples, rng)) > 0) {  
         // Generate camera rays and compute radiance along rays
         for (int i = 0; i < sampleCount; ++i) {
+            int s = i % nSpectralSamples;    //Andy plan: this loops through all wavelengths.
+
+            //wavelength assigned to ray
+            rays[i].wavelength = sampledLambdaStart + (sampledLambdaEnd-sampledLambdaStart)/nSpectralSamples * s;
+//std::cout << "nSpectarlSamples: " << nSpectralSamples;
+
+
             // Find camera ray for _sample[i]_
-rays[i].wavelength = 550.f; 
+//rays[i].wavelength = 550.f;           //Andy added this loop
 //std::cout << "rayWavelength: " << rays[i].wavelength << "\n";
             PBRT_STARTED_GENERATING_CAMERA_RAY(&samples[i]);
      
-            float rayWeight = camera->GenerateRayDifferential(samples[i], &rays[i]);  //Andy plan: give each ray a wavelength.  Rays with different wavelengths will be processed differently
-            
-
-            //Andy added for spectral 
-                  
-            //std::cout << "got here";
+            float rayWeight = camera->GenerateRayDifferential(samples[i], &rays[i]);
 
             rays[i].ScaleDifferentials(1.f / sqrtf(sampler->samplesPerPixel));
             PBRT_FINISHED_GENERATING_CAMERA_RAY(&samples[i], &rays[i], rayWeight);
 
-            // Evaluate radiance along camera ray
+            // Evaluate scene radiance along camera ray
             PBRT_STARTED_CAMERA_RAY_INTEGRATION(&rays[i], &samples[i]);
             if (visualizeObjectIds) {
                 if (rayWeight > 0.f && scene->Intersect(rays[i], &isects[i])) {
@@ -110,31 +112,40 @@ rays[i].wavelength = 550.f;
                     Ls[i] = 0.f;
             }
             else {
-            if (rayWeight > 0.f)
-                Ls[i] = rayWeight * renderer->Li(scene, rays[i], &samples[i], rng,
-                                                 arena, &isects[i], &Ts[i]);
-            else {
-                Ls[i] = 0.f;
-                Ts[i] = 1.f;
+                if (rayWeight > 0.f)
+                    //for this ray, returns the spectrum from the scene
+                    Ls[i] = rayWeight * renderer->Li(scene, rays[i], &samples[i], rng,
+                                                     arena, &isects[i], &Ts[i]);
+                else {
+                    Ls[i] = 0.f;
+                    Ts[i] = 1.f;
+                }
+
+                // Issue warning if unexpected radiance value returned
+                if (Ls[i].HasNaNs()) {
+                    Error("Not-a-number radiance value returned "
+                          "for image sample.  Setting to black.");
+                    Ls[i] = Spectrum(0.f);
+                }
+                else if (Ls[i].y() < -1e-5) {
+                    Error("Negative luminance value, %f, returned"
+                          "for image sample.  Setting to black.", Ls[i].y());
+                    Ls[i] = Spectrum(0.f);
+                }
+                else if (isinf(Ls[i].y())) {
+                    Error("Infinite luminance value returned"
+                          "for image sample.  Setting to black.");
+                    Ls[i] = Spectrum(0.f);
+                }
             }
 
-            // Issue warning if unexpected radiance value returned
-            if (Ls[i].HasNaNs()) {
-                Error("Not-a-number radiance value returned "
-                      "for image sample.  Setting to black.");
-                Ls[i] = Spectrum(0.f);
+            //loop through the spectrum and eliminate all values that aren't the current wavelength
+            for (int j = 0; j < nSpectralSamples; j++)
+            {
+                if (j != s)
+                    Ls[i].setSpectrum(j, 0);
             }
-            else if (Ls[i].y() < -1e-5) {
-                Error("Negative luminance value, %f, returned"
-                      "for image sample.  Setting to black.", Ls[i].y());
-                Ls[i] = Spectrum(0.f);
-            }
-            else if (isinf(Ls[i].y())) {
-                Error("Infinite luminance value returned"
-                      "for image sample.  Setting to black.");
-                Ls[i] = Spectrum(0.f);
-            }
-            }
+            
             PBRT_FINISHED_CAMERA_RAY_INTEGRATION(&rays[i], &samples[i], &Ls[i]);
         }
 

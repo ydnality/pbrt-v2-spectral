@@ -247,6 +247,17 @@ public:
             if (fscanf(f, "%f ", &c[i]) != 1) return false;
         return true;
     }
+    //Andy added : allow access to the c vector.  perhaps change this to wavelength later.  
+    void setSpectrum(int index, float value)
+    {
+        c[index] = value;
+    }
+
+    //Andy added
+    float getSpectrum(int index)
+    {
+        return c[index];
+    }
 protected:
     // CoefficientSpectrum Protected Data
     float c[nSamples];

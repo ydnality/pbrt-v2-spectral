@@ -442,6 +442,11 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
                 if (n2 ==0)
                     n2 = 1;
 
+                //add chromatic abberation effect here - basic for now
+                if (n1 != 1)
+                    n1 = (ray->wavelength - 550) * .04/(300)  +  n1;                 
+                if (n2 != 1)
+                    n2 = (ray->wavelength - 550) * .04/(300)  +  n2;
                 Vector s1 = ray->d;
                 if (lensRadius >0)
                     normalVec = -normalVec;
@@ -490,27 +495,21 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
         }
 
 
-                //--------------diffraction scattering-------------
-                //srand ( time(NULL) );
-                //generate random 2D gaussian
-                //double U1 = (rand() % 1000000)/ 999999;  //random double between 0 and 1
-                //double V1 = (rand() % 1000000)/ 999999;  //random double between 0 and 1
-                
-
-
-        
+        // --------------------add effect of diffraction----------------
         double initx = 0;
         double inity = 0;       
         double * x = &initx;
         double * y = &inity;   
-
+        //double currentAperture = lensRadius * 2;
 
         //calculate min distance direction
        
         //calculate radius
+        //Point intersectPoint(lensU, lensV, 0.f);
         double radius = sqrt(intersectPoint.x * intersectPoint.x + intersectPoint.y * intersectPoint.y );
 
 //cout << "radius: " << radius << "\n";
+//std::cout << "rayWavelength: " << ray->wavelength << "\n";
 
         //calculate direction 
         Vector direction(intersectPoint.x, intersectPoint.y, 0);
@@ -524,20 +523,18 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
         a = a;
         b = b;
         double pi = 3.14159265359;
-        double lambda = .000000550;  //550 nanometers for now
-        
+        //double lambda = .000000550;  //550 nanometers for now
+        double lambda = ray->wavelength * 1e-9;
         double sigma_x = atan(1/(2 * a *.001 * 2 * pi/lambda)); 
         double sigma_y = atan(1/(2 *b * .001 * 2 * pi/lambda)); 
-                //gsl_ran_bivariate_gaussian (const gsl_rng * r, double sigma_x, double sigma_y, double rho, double * x, double * y)             
+
+        //gsl_ran_bivariate_gaussian (const gsl_rng * r, double sigma_x, double sigma_y, double rho, double * x, double * y)             
        gsl_ran_bivariate_gaussian (r, sigma_x, sigma_y, 0, x, y);    //experiment for now
                
-                //add r.v. in directions of direction and orthoDirection
-
-//cout << "sigma_x: " << sigma_x << "\n";
-//cout << "sigma_y: " << sigma_y << "\n";
+        //add r.v. in directions of direction and orthoDirection
 
 
-                //calculate component of these vectors based on 2 random degrees
+        //calculate component of these vectors based on 2 random degrees
         direction = Normalize(direction);
         orthoDirection = Normalize(orthoDirection);
 
@@ -555,20 +552,10 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
          double rB = sqrt(projB * projB + projC * projC);
          double thetaA = acos(projA/rA);          
          double thetaB = acos(projB/rB);
-//cout << "thetaA: " << thetaA << "\n";
-//cout << "thetaB: " << thetaB << "\n";
 
          //add uncertainty
-         //thetaA = thetaA + noiseA;
-         //thetaB = thetaB + noiseB;
-//cout << "noiseA" << noiseA << "\n";
-//cout << "noiseB" << noiseB << "\n";
-
-    //if (abs(noiseA) > 3 || abs(noiseB) > 3)
-    //    cout << "LARGE NOISE!!\n";
-//cout << "thetaANoise: " << thetaA << "\n";
-//cout << "thetaBNoise: " << thetaB << "\n";
-
+         thetaA = thetaA + noiseA;
+         thetaB = thetaB + noiseB;
          
          //convert angles back into cartesian coordinates, but in a,b space
          double newProjA = cos(thetaA) * rA;
@@ -592,7 +579,8 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
 
         ray->d = Normalize(ray->d);       
 
-                //-------------end diffraction scattering-----------            
+
+        //------------end diffraction-----------------        
     }
 
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
