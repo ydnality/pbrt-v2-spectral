@@ -41,7 +41,7 @@
 #include "cameras/environment.h"
 #include "cameras/orthographic.h"
 #include "cameras/perspective.h"
-#include "cameras/realistic.h"
+#include "cameras/realisticDiffraction.h"
 #include "cameras/perspectiveDiffraction.h"
 #include "film/image.h"
 #include "filters/box.h"
@@ -607,8 +607,8 @@ Camera *MakeCamera(const string &name,
         camera = CreateOrthographicCamera(paramSet, animatedCam2World, film);
     else if (name == "environment")
         camera = CreateEnvironmentCamera(paramSet, animatedCam2World, film);
-    else if (name == "realistic")   //Andy added for lens ray tracing
-    	camera = CreateRealisticCamera(paramSet, animatedCam2World, film);
+    else if (name == "realisticDiffraction")   //Andy added for lens ray tracing
+    	camera = CreateRealisticDiffractionCamera(paramSet, animatedCam2World, film);
     else
         Warning("Camera \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
