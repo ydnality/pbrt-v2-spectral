@@ -33,12 +33,13 @@
 #include "parallel.h"
 
 // Spectrum Utility Declarations
-/*static const int sampledLambdaStart = 400;
+static const int sampledLambdaStart = 400;
 static const int sampledLambdaEnd = 700;
-static const int nSpectralSamples = 30;*/
-static const int sampledLambdaStart = 395;   //Andy changed so that there are 31 channels
+static const int nSpectralSamples = 31; //andy changed - 11/06/12
+
+/*static const int sampledLambdaStart = 395;   //Andy changed so that there are 31 channels
 static const int sampledLambdaEnd = 705;     //Andy TODO: need to confirm that this binning procedure is indeed how it works...
-static const int nSpectralSamples = 31;
+static const int nSpectralSamples = 31;*/
 
 extern bool SpectrumSamplesSorted(const float *lambda, const float *vals, int n);
 extern void SortSpectrumSamples(float *lambda, float *vals, int n);

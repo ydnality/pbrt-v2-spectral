@@ -24,6 +24,7 @@
 
 // core/camera.cpp*
 #include "stdafx.h"
+#include <iostream>
 #include "camera.h"
 #include "film.h"
 #include "montecarlo.h"
@@ -50,12 +51,22 @@ Camera::Camera(const AnimatedTransform &cam2world,
 
 float Camera::GenerateRayDifferential(const CameraSample &sample,
                                       RayDifferential *rd) const {
+    
+    float tempWavelength = rd->wavelength;   //Andy added to retain wavelength information
+//std::cout << "tempWavelength: " << tempWavelength << "\n";
+    rd->wavelength = tempWavelength;   //Andy added to retain wavelength information    
     float wt = GenerateRay(sample, rd);
+    //std::cout << "rd->wavelength: " << rd->wavelength << "\n";
+
     // Find ray after shifting one pixel in the $x$ direction
     CameraSample sshift = sample;
     ++(sshift.imageX);
+
+    
     Ray rx;
+    rx.wavelength = tempWavelength;   //Andy added to retain wavelength information
     float wtx = GenerateRay(sshift, &rx);
+    
     rd->rxOrigin = rx.o;
     rd->rxDirection = rx.d;
 
@@ -63,6 +74,7 @@ float Camera::GenerateRayDifferential(const CameraSample &sample,
     --(sshift.imageX);
     ++(sshift.imageY);
     Ray ry;
+    ry.wavelength = tempWavelength;   //Andy added to retain wavelength information
     float wty = GenerateRay(sshift, &ry);
     rd->ryOrigin = ry.o;
     rd->ryDirection = ry.d;

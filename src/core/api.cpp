@@ -43,7 +43,8 @@
 #include "cameras/perspective.h"
 #include "cameras/realisticDiffraction.h"
 #include "cameras/perspectiveDiffraction.h"
-#include "film/image.h"
+//#include "film/image.h"
+#include "film/spectralImage.h"
 #include "filters/box.h"
 #include "filters/gaussian.h"
 #include "filters/mitchell.h"
@@ -662,7 +663,9 @@ Film *MakeFilm(const string &name,
     const ParamSet &paramSet, Filter *filter) {
     Film *film = NULL;
     if (name == "image")
-        film = CreateImageFilm(paramSet, filter);
+        film = CreateSpectralImageFilm(paramSet, filter);
+    else if (name =="spectralImage")
+        film = CreateSpectralImageFilm(paramSet, filter);   //Andy: important!! this allows for backwards compatibility!! the "spectral" image film contains a pointer to self for FOV calculation
     else
         Warning("Film \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
@@ -1269,7 +1272,7 @@ Renderer *RenderOptions::MakeRenderer() const {
 
 Camera *RenderOptions::MakeCamera() const {
     Filter *filter = MakeFilter(FilterName, FilterParams);
-    Film *film = MakeFilm(FilmName, FilmParams, filter);
+    Film *film = MakeFilm(FilmName, FilmParams, filter);  //Andy: this is an important part to modify to allow for FOV output
     if (!film) Severe("Unable to create film.");
     Camera *camera = ::MakeCamera(CameraName, CameraParams,
         CameraToWorld, renderOptions->transformStartTime,
