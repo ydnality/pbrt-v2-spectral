@@ -32,6 +32,9 @@
 #include "parallel.h"
 #include "imageio.h"
 #include "floatfile.h"
+#include "cameras/realisticDiffraction.h"
+#include <typeinfo>
+#include <math.h>
 
 // SpectralImageFilm Method Definitions
 SpectralImageFilm::SpectralImageFilm(int xres, int yres, Filter *filt, const float crop[4],
@@ -361,12 +364,16 @@ void SpectralImageFilm::WriteImage(float splatScale) {
     //    myfile << waveSpecify[i] << " ";
     //myfile << "\n";
 
-    //print out field of view information - fill this in later after we figure out how to do it
-    float fieldOfView = 8;
-    float aperture = 2;
-    float focalLength = 50;
-    myfile << focalLength << " " << aperture << " " << fieldOfView << "\n";
+    //print out field of view information
+    //float fieldOfView = 8;
+    float d = sensorWidth;
+    float fieldOfView = 2 * atan(d/(2 * focalLength)) / 3.1415926539 * 180;
+    
+    //float aperture = 2;
+    //float focalLength = 50;
+    myfile << focalLength << " " << fStop << " " << fieldOfView << "\n";
 
+std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView << "\n";
     //std::cout << "
 
     myfile.close();
@@ -413,6 +420,63 @@ void SpectralImageFilm::WriteImage(float splatScale) {
 void SpectralImageFilm::UpdateDisplay(int x0, int y0, int x1, int y1,
     float splatScale) {
 }
+
+//Andy: added this additional construction function to allow for camera pointer - for FOV calculations
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter, Camera * baseCamera) 
+{
+
+    
+    // ANDY: THIS WILL REQUIRE SOME RETHINKING FOR MAXIMUM COMPATIBILITY!!!    ... but works for now.  but what if baseCamera is not a compatible type?!
+    
+	//baseCamera contains information about the camera: information such as focal length is very important to calculate field of view.
+	//float focalLength = baseCamera->focalLength
+	//also need film dimensions
+	//float horizontalFOV = 2 * arctan(d/2f)
+	
+	//RealisticDiffractionCamera* dynamic_cast<RealisticDiffractionCamera*> (baseCamera);
+	
+	//string myType = typeid(*baseCamera).name();
+    //string comparison ("26RealisticDiffractionCamera");	
+    //std::cout << comparison;
+	std::cout << "\n\nin constructor!!\n\n";
+	//if (myType.compare(comparison) != 0)
+	//{
+	    float tfocalLength = ((RealisticDiffractionCamera*)baseCamera)->getFocalLength();  // NEED TO ADD THIS STILL  
+	    float tfStop = ((RealisticDiffractionCamera*)baseCamera)->getFStop();  //NEED TO ADD THIS STILL  
+	    float tSensWidth = ((RealisticDiffractionCamera*)baseCamera)->getSensorWidth(); 
+	
+	    std::cout << "focalLength: " << tfocalLength;
+	    std:: cout << "\nfStop: " << tfStop << "\n";
+	//}
+	//else
+	//{
+	//    std::cout << "no focal length or fStop information for this camera!\n";
+	//    std::cout << "myType: " << myType << "\n";
+	//}
+	
+    
+	SpectralImageFilm * newImageFilm = CreateSpectralImageFilm(params, filter);
+	newImageFilm->SetFStop(tfStop);
+	newImageFilm->SetFocalLength(tfocalLength);
+	newImageFilm->SetSensorWidth(tSensWidth);
+    return newImageFilm;
+}
+
+
+ //Andy: added these for lens information and FOV output to ISET
+void SpectralImageFilm::SetFStop(float inputFStop)
+{
+    fStop = inputFStop;       
+}
+void SpectralImageFilm::SetFocalLength(float inputFocalLength)
+{
+    focalLength = inputFocalLength;
+}
+void SpectralImageFilm::SetSensorWidth(float sensWidth)
+{
+    sensorWidth = sensWidth;
+}
+
 
 //Andy: added conversionmatrix file here
 SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter) {

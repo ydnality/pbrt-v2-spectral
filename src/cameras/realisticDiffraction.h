@@ -31,17 +31,22 @@ public:
    float GenerateRay(const CameraSample &sample, Ray *) const;
    float GenerateCameraRay(const CameraSample &sample, Ray *) const;
     void runLensFlare(const Scene * scene, const Renderer * renderer) const;
+   float getFStop();
+   float getFocalLength();
+   float getSensorWidth();
 private:
    float ShutterOpen;
    float ShutterClose;
    float filmDiag;
    float filmDistance;
-    gsl_rng * r;
+   gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
    bool IntersectLensEl(const Ray &r, float *tHit, float radius, float dist,  Vector & normalVec) const;
    bool diffractionEnabled;
    bool chromaticAberrationEnabled;
+   float fstop;
+   float focalLength;
 
 ;
 };

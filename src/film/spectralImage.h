@@ -25,8 +25,8 @@
 #pragma once
 #endif
 
-#ifndef PBRT_FILM_IMAGE_H
-#define PBRT_FILM_IMAGE_H
+#ifndef PBRT_FILM_SPECTRAL_IMAGE_H
+#define PBRT_FILM_SPECTRAL_IMAGE_H
 
 // film/image.h*
 #include "pbrt.h"
@@ -55,7 +55,9 @@ public:
     void WriteImage(float splatScale);
     void UpdateDisplay(int x0, int y0, int x1, int y1, float splatScale);
     void ParseConversionMatrix(string filename);     //Andy Added: function that parses the conversion matrix file
-
+    void SetFStop(float inputFStop);        //Andy: added these for lens information and FOV output to ISET
+    void SetFocalLength(float inputFocalLength);
+    void SetSensorWidth(float sensWidth); //need this for FOV
 private:
     //Andy added to allow for conversion matrix file parsing
     float * conversionMatrix;     //actual matrix storage
@@ -82,9 +84,14 @@ private:
     };
     BlockedArray<Pixel> *pixels;
     float *filterTable;
+    
+    //Andy: added these to support the output of lens information to ISET
+    float fStop;
+    float focalLength;
+    float sensorWidth;
 };
 
-
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter, Camera * baseCamera);
 SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter);
 
 #endif // PBRT_FILM_IMAGE_H

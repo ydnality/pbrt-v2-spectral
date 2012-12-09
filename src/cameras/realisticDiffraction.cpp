@@ -5,7 +5,7 @@
 #include "sampler.h"
 #include "montecarlo.h"
 #include "filters/box.h"
-#include "film/image.h"
+#include "film/spectralImage.h"
 #include "samplers/stratified.h"
 #include "intersection.h"
 #include "renderer.h"
@@ -32,6 +32,7 @@ using namespace std;
 RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &params,
         const AnimatedTransform &cam2world, Film *film) {
 	   // Extract common camera parameters from \use{ParamSet}
+
 	   float hither = params.FindOneFloat("hither", -1);
 	   float yon = params.FindOneFloat("yon", -1);
 	   float shutteropen = params.FindOneFloat("shutteropen", -1);
@@ -40,8 +41,10 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 	   string specfile = params.FindOneString("specfile", "");
 	   float filmdistance = params.FindOneFloat("filmdistance", 70.0); // about 70 mm default to film
         cout << "filmdistance: " << filmdistance << "\n";
-	   float fstop = params.FindOneFloat("aperture_diameter", 1.0);
+	   float apdiameter = params.FindOneFloat("aperture_diameter", 1.0);
 	   float filmdiag = params.FindOneFloat("filmdiag", 35.0);
+	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
+
 	   assert(hither != -1 && yon != -1 && shutteropen != -1 &&
 	      shutterclose != -1 && filmdistance!= -1);
 	   if (specfile == "") {
@@ -56,13 +59,16 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
        bool chromaticFlag =  chromaticAberrationEnabled ==1.f;
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
-	      shutteropen, shutterclose, filmdistance, fstop,
+	      shutteropen, shutterclose, filmdistance, apdiameter,
 	      specfile, filmdiag, film, diffractFlag, chromaticFlag);
 }
 
+
+
+
 RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &cam2world,
                                  float hither, float yon,
-                                 float sopen, float sclose,
+                                 float sopen, float sclose,  
                                  float filmdistance, float aperture_diameter_,
                                  const string &specfile,
                                  float filmdiag,
@@ -97,15 +103,22 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     }
 
     //check to see if the number of floats is a multiple of 4
-    if (vals.size() % 4 != 0)
+    if ((vals.size()-1) % 4 != 0)
     {
-        Warning("Wrong number of float values in lens file!");
+        Warning("Wrong number of float values in lens file!  Check file format!  Did you forget to specify the focal length?");
         return;
     }
 
-    for (int i = 0; i < vals.size(); i+=4)
+    float focallength = vals[0];   //read the focal length - this is new
+    focalLength = focallength;
+    std::cout << "focalLength :" << focalLength << "\n";
+    fstop = focalLength/aperture_diameter_;
+
+    std::cout << "apertureDiameter: " << aperture_diameter_ << "\n";
+    std::cout << "fstop: f/" << fstop << "\n";
+    
+    for (int i = 1; i < vals.size(); i+=4)
     {
-        
         std::cout << vals[i] << "  " << vals[i+1] << "  " << vals[i+2] << "  " << vals[i+3] << "\n";
         LensElement currentLensEl;
         currentLensEl.radius = vals[i];
@@ -143,6 +156,17 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 RealisticDiffractionCamera::~RealisticDiffractionCamera()
 {
 
+}
+
+
+float RealisticDiffractionCamera::getFStop()
+{
+	return fstop;
+}
+
+float RealisticDiffractionCamera::getFocalLength()
+{
+	return focalLength;
 }
 
 void RealisticDiffractionCamera::runLensFlare(const Scene * scene, const Renderer * renderer) const
@@ -274,6 +298,14 @@ bool RealisticDiffractionCamera::IntersectLensEl(const Ray &r, float *tHit, floa
     //*rayEpsilon = 5e-4f * *tHit;
     normalVec = Normalize(Vector(ray.d.x * thit + ray.o.x, ray.d.y*thit + ray.o.y, ray.d.z*thit + ray.o.z));
     return true;
+}
+
+float RealisticDiffractionCamera::getSensorWidth()
+{
+    
+    float aspectRatio = (float)film->xResolution/(float)film->yResolution;
+    float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    return width;
 }
 
 float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
@@ -461,9 +493,9 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
                 {
                    // std::cout << "ray->wavelength: " << ray->wavelength << "\n";
                     if (n1 != 1)
-                        n1 = (ray->wavelength - 550) * .04/(300)  +  n1;              //should be .04     
+                        n1 = (ray->wavelength - 550) * -.04/(300)  +  n1;              //should be .04     
                     if (n2 != 1)
-                        n2 = (ray->wavelength - 550) * .04/(300)  +  n2;
+                        n2 = (ray->wavelength - 550) * -.04/(300)  +  n2;
                 }
 
                 Vector s1 = ray->d;

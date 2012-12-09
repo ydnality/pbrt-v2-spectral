@@ -43,8 +43,10 @@
 #include "cameras/perspective.h"
 #include "cameras/realisticDiffraction.h"
 #include "cameras/perspectiveDiffraction.h"
-//#include "film/image.h"
+
 #include "film/spectralImage.h"
+//#include "film/image.h"
+
 #include "filters/box.h"
 #include "filters/gaussian.h"
 #include "filters/mitchell.h"
@@ -660,12 +662,29 @@ Filter *MakeFilter(const string &name,
 
 
 Film *MakeFilm(const string &name,
-    const ParamSet &paramSet, Filter *filter) {
+    const ParamSet &paramSet, Filter *filter) {    //original function
     Film *film = NULL;
     if (name == "image")
-        film = CreateSpectralImageFilm(paramSet, filter);
+        film = CreateSpectralImageFilm(paramSet, filter);   
+    else
+        Warning("Film \"%s\" unknown.", name.c_str());
+    paramSet.ReportUnused();
+    return film;
+}
+
+
+
+Film *MakeFilm(const string &name,
+    const ParamSet &paramSet, Filter *filter, Camera * baseCamera) {  //andy: this is an overloaded function... added the camera pointer for FOV calculation
+    Film *film = NULL;
+    if (name == "image")
+        film = CreateSpectralImageFilm(paramSet, filter, baseCamera);   //andy: might want to change this back to regular image film
     else if (name =="spectralImage")
-        film = CreateSpectralImageFilm(paramSet, filter);   //Andy: important!! this allows for backwards compatibility!! the "spectral" image film contains a pointer to self for FOV calculation
+    {
+        //film = CreateSpectralImageFilm(paramSet, filter);  
+        film = CreateSpectralImageFilm(paramSet, filter, baseCamera); 
+         //Andy: important!! this allows for backwards compatibility!! the "spectral" image film contains a pointer to self for FOV calculation
+    }
     else
         Warning("Film \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
@@ -1272,12 +1291,20 @@ Renderer *RenderOptions::MakeRenderer() const {
 
 Camera *RenderOptions::MakeCamera() const {
     Filter *filter = MakeFilter(FilterName, FilterParams);
-    Film *film = MakeFilm(FilmName, FilmParams, filter);  //Andy: this is an important part to modify to allow for FOV output
+    Camera *camera = NULL;
+    Film *film = MakeFilm(FilmName, FilmParams, filter); 
     if (!film) Severe("Unable to create film.");
-    Camera *camera = ::MakeCamera(CameraName, CameraParams,
+    camera = ::MakeCamera(CameraName, CameraParams,
         CameraToWorld, renderOptions->transformStartTime,
         renderOptions->transformEndTime, film);
     if (!camera) Severe("Unable to create camera.");
+    
+    film = MakeFilm(FilmName, FilmParams, filter, camera);  //Andy: this is an important part to modify to allow for FOV output
+    camera = ::MakeCamera(CameraName, CameraParams,
+        CameraToWorld, renderOptions->transformStartTime,
+        renderOptions->transformEndTime, film);
+    //film->setCamera(camera);   //Andy: this is necessary because we have a catch 22 problem initially with the camera and film.
+    //Andy: this is currently not very elegant... try to think of something better in the future...
     return camera;
 }
 

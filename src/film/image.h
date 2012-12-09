@@ -35,8 +35,6 @@
 #include "filter.h"
 #include "paramset.h"
 
-const bool debugMode = false;    //Andy added this flag for debugging
-
 // ImageFilm Declarations
 class ImageFilm : public Film {
 public:
@@ -48,37 +46,27 @@ public:
         delete filter;
         delete[] filterTable;
     }
-    void AddSample(const CameraSample &sample, const Spectrum &L, const Ray &currentRay);
+    void AddSample(const CameraSample &sample, const Spectrum &L, const Ray &currentRay);  //Andy changed: added the 3rd parameter since we changed the film class to allow for multispectral!!!
     void Splat(const CameraSample &sample, const Spectrum &L);
     void GetSampleExtent(int *xstart, int *xend, int *ystart, int *yend) const;
     void GetPixelExtent(int *xstart, int *xend, int *ystart, int *yend) const;
     void WriteImage(float splatScale);
     void UpdateDisplay(int x0, int y0, int x1, int y1, float splatScale);
-    void ParseConversionMatrix(string filename);     //Andy Added: function that parses the conversion matrix file
-
 private:
-    //Andy added to allow for conversion matrix file parsing
-    float * conversionMatrix;     //actual matrix storage
-    int nCMRows;
-    int nCMCols; 
-    float * waveSpecify;
-
     // ImageFilm Private Data
     Filter *filter;
     float cropWindow[4];
     string filename;
     int xPixelStart, yPixelStart, xPixelCount, yPixelCount;
-    //Andy: modified this to allow for multispectral
     struct Pixel {
         Pixel() {
-            for (int i = 0; i < nSpectralSamples; ++i) c[i] = splatC[i] = 0.f;
+            for (int i = 0; i < 3; ++i) Lxyz[i] = splatXYZ[i] = 0.f;
             weightSum = 0.f;
         }
-        float c[nSpectralSamples];   //changed here to allow for >3 channels
+        float Lxyz[3];
         float weightSum;
-        float splatC[nSpectralSamples];   //changed here
+        float splatXYZ[3];
         float pad;
-        float Z;   //added this
     };
     BlockedArray<Pixel> *pixels;
     float *filterTable;
