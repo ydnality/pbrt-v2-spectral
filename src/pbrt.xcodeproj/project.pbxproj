@@ -822,9 +822,8 @@
 				B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */,
 				B1D8EC7C1170310E00A8A49E /* volumegrid.h */,
 			);
-			name = volumes;
-			path = "../../../Users/ben/Documents/Projects/pbrt-multi/pbrt-v2-spectral/src/volumes";
-			sourceTree = SDKROOT;
+			path = volumes;
+			sourceTree = SOURCE_ROOT;
 		};
 		C6859E8C029090F304C91782 /* Documentation */ = {
 			isa = PBXGroup;
@@ -863,7 +862,6 @@
 			isa = PBXProject;
 			buildConfigurationList = 1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "pbrt" */;
 			compatibilityVersion = "Xcode 3.1";
-			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				en,
