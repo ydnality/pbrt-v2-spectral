@@ -131,6 +131,8 @@
 		B5757C23162725C9003E31A0 /* GSL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B5757C22162725C9003E31A0 /* GSL.framework */; };
 		B5757C2C162726C0003E31A0 /* anisoward.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5757C28162726C0003E31A0 /* anisoward.cpp */; };
 		B5757C2D162726C0003E31A0 /* AnisoWardBrdf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5757C2A162726C0003E31A0 /* AnisoWardBrdf.cpp */; };
+		B59C128316822129003A7CFF /* libIlmImf.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B59C128216822129003A7CFF /* libIlmImf.a */; };
+		B59C12891682214B003A7CFF /* libHalf.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B59C12881682214B003A7CFF /* libHalf.a */; };
 		B5CEBF3415B8BC6500F6930F /* realistic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B5CEBF3215B8BC6500F6930F /* realistic.cpp */; };
 /* End PBXBuildFile section */
 
@@ -415,11 +417,13 @@
 		B1D8EC7B1170310E00A8A49E /* volumegrid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = volumegrid.cpp; path = volumes/volumegrid.cpp; sourceTree = SOURCE_ROOT; };
 		B1D8EC7C1170310E00A8A49E /* volumegrid.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = volumegrid.h; path = volumes/volumegrid.h; sourceTree = SOURCE_ROOT; };
 		B1D8ECE2117032E500A8A49E /* pbrt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pbrt; sourceTree = BUILT_PRODUCTS_DIR; };
-		B5757C22162725C9003E31A0 /* GSL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GSL.framework; path = /Library/Frameworks/GSL.framework; sourceTree = "<absolute>"; };
+		B5757C22162725C9003E31A0 /* GSL.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; name = GSL.framework; path = ../Library/Frameworks/GSL.framework; sourceTree = DEVELOPER_DIR; };
 		B5757C28162726C0003E31A0 /* anisoward.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = anisoward.cpp; sourceTree = "<group>"; };
 		B5757C29162726C0003E31A0 /* anisoward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = anisoward.h; sourceTree = "<group>"; };
 		B5757C2A162726C0003E31A0 /* AnisoWardBrdf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AnisoWardBrdf.cpp; sourceTree = "<group>"; };
 		B5757C2B162726C0003E31A0 /* AnisoWardBrdf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AnisoWardBrdf.h; sourceTree = "<group>"; };
+		B59C128216822129003A7CFF /* libIlmImf.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libIlmImf.a; path = /opt/local/lib/libIlmImf.a; sourceTree = "<absolute>"; };
+		B59C12881682214B003A7CFF /* libHalf.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libHalf.a; path = /opt/local/lib/libHalf.a; sourceTree = "<absolute>"; };
 		B5CEBF3215B8BC6500F6930F /* realistic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = realistic.cpp; sourceTree = "<group>"; };
 		B5CEBF3315B8BC6500F6930F /* realistic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = realistic.h; sourceTree = "<group>"; };
 		B5CEBF3715B8BCC000F6930F /* pbrtparse.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = pbrtparse.hpp; sourceTree = "<group>"; };
@@ -431,6 +435,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				B5757C23162725C9003E31A0 /* GSL.framework in Frameworks */,
+				B59C128316822129003A7CFF /* libIlmImf.a in Frameworks */,
+				B59C12891682214B003A7CFF /* libHalf.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -440,6 +446,8 @@
 		08FB7794FE84155DC02AAC07 /* pbrt */ = {
 			isa = PBXGroup;
 			children = (
+				B59C12881682214B003A7CFF /* libHalf.a */,
+				B59C128216822129003A7CFF /* libIlmImf.a */,
 				08FB7795FE84155DC02AAC07 /* Source */,
 				C6859E8C029090F304C91782 /* Documentation */,
 				1AB674ADFE9D54B511CA2CBB /* Products */,
@@ -1019,12 +1027,17 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = PBRT_PROBES_NONE;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					PBRT_HAS_OPENEXR,
+					PBRT_PROBES_NONE,
+				);
 				HEADER_SEARCH_PATHS = (
+					/opt/local/include/OpenEXR,
 					"$(DERIVED_FILES_DIR)/Yacc",
 					.,
 				);
 				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
 				PRODUCT_NAME = pbrt;
 			};
 			name = Debug;
@@ -1035,12 +1048,17 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
-				GCC_PREPROCESSOR_DEFINITIONS = PBRT_PROBES_NONE;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					PBRT_HAS_OPENEXR,
+					PBRT_PROBES_NONE,
+				);
 				HEADER_SEARCH_PATHS = (
+					/opt/local/include/OpenEXR,
 					"$(DERIVED_FILES_DIR)/Yacc",
 					.,
 				);
 				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
 				PRODUCT_NAME = pbrt;
 			};
 			name = Release;
@@ -1051,10 +1069,7 @@
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					PBRT_STATS_NONE,
-					PBRT_HAS_PTHREADS,
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ..;
@@ -1070,11 +1085,7 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					NDEBUG,
-					PBRT_STATS_NONE,
-					PBRT_HAS_PTHREADS,
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ..;
@@ -1089,11 +1100,7 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					NDEBUG,
-					PBRT_STATS_DTRACE,
-					PBRT_HAS_PTHREADS,
-				);
+				GCC_PREPROCESSOR_DEFINITIONS = "";
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = ..;
@@ -1109,12 +1116,17 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
-				GCC_PREPROCESSOR_DEFINITIONS = PBRT_PROBES_NONE;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					PBRT_HAS_OPENEXR,
+					PBRT_PROBES_NONE,
+				);
 				HEADER_SEARCH_PATHS = (
+					/opt/local/include/OpenEXR,
 					"$(DERIVED_FILES_DIR)/Yacc",
 					.,
 				);
 				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = /opt/local/lib;
 				PRODUCT_NAME = pbrt;
 			};
 			name = dtrace;
