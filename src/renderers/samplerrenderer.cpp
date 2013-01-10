@@ -34,6 +34,7 @@
 #include "progressreporter.h"
 #include "camera.h"
 #include "intersection.h"
+#include <time.h>
 
 
 static uint32_t hash(char *key, uint32_t len)
@@ -66,6 +67,9 @@ void SamplerRendererTask::Run() {
     // Declare local variables used for rendering loop
     MemoryArena arena;
     RNG rng(taskNum);
+
+    // Andy experiment: change the seed depending on the time
+    rng.Seed((unsigned)time(NULL));    
 
     // Allocate space for samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
