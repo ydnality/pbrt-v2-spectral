@@ -69,7 +69,7 @@ void SamplerRendererTask::Run() {
     RNG rng(taskNum);
 
     // Andy experiment: change the seed depending on the time
-    rng.Seed((unsigned)time(NULL));    
+    rng.Seed((uint32_t)time(NULL));    
 
     // Allocate space for samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
