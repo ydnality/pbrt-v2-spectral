@@ -35,6 +35,7 @@
 #include "camera.h"
 #include "intersection.h"
 #include <time.h>
+#include <sys/time.h>
 
 
 static uint32_t hash(char *key, uint32_t len)
@@ -69,7 +70,12 @@ void SamplerRendererTask::Run() {
     RNG rng(taskNum);
 
     // Andy experiment: change the seed depending on the time
-    rng.Seed((uint32_t)time(NULL));    
+    timeval t;    //code derived from cplusplus.com
+    gettimeofday(&t, NULL);    
+    unsigned randomusec = t.tv_usec;
+
+    rng.Seed((uint32_t)randomusec);    
+    //rng.Seed((unsigned)time(NULL));    
 
     // Allocate space for samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
