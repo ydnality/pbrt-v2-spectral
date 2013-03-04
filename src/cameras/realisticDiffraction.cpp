@@ -58,6 +58,8 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
        float chromaticAberrationEnabled = params.FindOneFloat("chromaticAberrationEnabled", 0.0);
        bool chromaticFlag =  chromaticAberrationEnabled ==1.f;
 
+        //TODO: read DEPTHMAP OR NOT  PARAMETER HERE!!
+
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
 	      specfile, filmdiag, film, diffractFlag, chromaticFlag);
@@ -148,6 +150,9 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
      
        T = gsl_rng_default;
        r = gsl_rng_alloc (T);
+
+
+    //TODO: TELL FILM THAT THIS IS DEPTH MAP PROCESSING
 
 
 }
@@ -304,7 +309,8 @@ float RealisticDiffractionCamera::getSensorWidth()
 {
     
     float aspectRatio = (float)film->xResolution/(float)film->yResolution;
-    float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    //float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    float width = filmDiag /sqrt((1.f + 1.f/(aspectRatio * aspectRatio)));
     return width;
 }
 
@@ -327,7 +333,8 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 //cout << "startingPoint.z: " << startingPoint.z;
     
     float aspectRatio = (float)film->xResolution/(float)film->yResolution;
-    float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    //float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    float width = filmDiag /sqrt((1.f + 1.f/(aspectRatio * aspectRatio)));  
     float height = width/aspectRatio;
     
     startingPoint.x *= width/2.f;
@@ -342,17 +349,31 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     float firstAperture = lensEls[lensEls.size()-1].aperture/2;
     float firstRadius = lensEls[lensEls.size()-1].radius;
 
+
+
     //special case for when aperture is 1st element
     float zIntercept = 0;
     if (firstRadius ==0)
         zIntercept = 0;
     else
         zIntercept = (-firstRadius - sqrt(firstRadius * firstRadius - firstAperture * firstAperture));
+
+    //experiment
+    zIntercept = 0;
+
 //std::cout << " firstRadius: " << firstRadius;
 //std::cout << " firstAperture: " << firstAperture;
 //std::cout << " zIntercept: " << zIntercept;
+
+    //TODO: adjust first aperture depending on if we are using depth-map mode or NOT
+
     lensU *= firstAperture;
     lensV *= firstAperture;
+
+    //experiment
+    lensU = 0;
+    lensV = 0;
+
     //vdb visualize sampling surface
     Point pointOnLens = Point(lensU, lensV, zIntercept);   //can we even assume that lens is a flat disk, maybe this has problems later?
    float tempWavelength = ray->wavelength; 

@@ -75,7 +75,7 @@ void SamplerRendererTask::Run() {
     unsigned randomusec = t.tv_usec;
 
     rng.Seed((uint32_t)randomusec);    
-    //rng.Seed((unsigned)time(NULL));    
+    rng.Seed((unsigned)time(NULL));    
 
     // Allocate space for samples and intersections
     int maxSamples = sampler->MaximumSampleCount();
@@ -84,6 +84,8 @@ void SamplerRendererTask::Run() {
     Spectrum *Ls = new Spectrum[maxSamples];
     Spectrum *Ts = new Spectrum[maxSamples];
     Intersection *isects = new Intersection[maxSamples];
+
+std::cout << "right Before sampling loop!" ;
 
     // Get samples from _Sampler_ and update image
     int sampleCount;

@@ -146,9 +146,13 @@ void SpectralImageFilm::AddSample(const CameraSample &sample,
                 }   
                 AtomicAdd(&pixel.weightSum, filterWt);
             }
-            pixel.Z += currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
+            pixel.Z += currentRay.maxt * filterWt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
+            //pixel.Z += currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
         }
     }
+
+   // Pixel &pixel = (*pixels)((x0 + x1)/2, (y0 + y1)/2);
+   // pixel.Z = currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
 }
 
 
@@ -353,7 +357,7 @@ void SpectralImageFilm::WriteImage(float splatScale) {
     std::ofstream myfile;
     int lastPos = filename.find_last_of(".");
     string newFileName = filename.substr(0, lastPos) + ".dat";
-
+    string newFileNameDM = filename.substr(0, lastPos) + "_DM.dat";
     
     myfile.open (newFileName.c_str());
 
@@ -382,6 +386,8 @@ std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView 
     FILE * spectralImageBin;
 	spectralImageBin = fopen(newFileName.c_str(), "a");
 
+    FILE * depthMapBin;
+    depthMapBin = fopen(newFileNameDM.c_str(), "a");
 
     //TODO: perhaps dump the conversion matrix here
 
@@ -392,6 +398,7 @@ std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView 
 		{ 
             double r = (double)finalCMultiplied[nCMRows * j + i];
             fwrite((void*)(&r), sizeof(r), 1, spectralImageBin);
+
             //myfile << finalCMultiplied[nCMRows * j + i];
             //if (j < nPix - 1)
             //    myfile << " ";
@@ -400,6 +407,14 @@ std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView 
     }
 
     fclose(spectralImageBin);
+
+    //Write Binary depth map file
+    for (int j = 0; j < nPix; j++)
+    {
+        double r2 = (double)finalZ[3 * j];
+        fwrite((void*)(&r2), sizeof(r2), 1, depthMapBin);
+    }   
+    fclose(depthMapBin);
 
     //::WriteImage(filename, rgb, NULL, xPixelCount, yPixelCount,
     //             xResolution, yResolution, xPixelStart, yPixelStart);
@@ -433,26 +448,35 @@ SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filte
 	//also need film dimensions
 	//float horizontalFOV = 2 * arctan(d/2f)
 	
-	//RealisticDiffractionCamera* dynamic_cast<RealisticDiffractionCamera*> (baseCamera);
+	//RealisticDiffractionCamera* 
+    //dynamic_cast<RealisticDiffractionCamera*> (baseCamera);
 	
-	//string myType = typeid(*baseCamera).name();
-    //string comparison ("26RealisticDiffractionCamera");	
-    //std::cout << comparison;
-	std::cout << "\n\nin constructor!!\n\n";
-	//if (myType.compare(comparison) != 0)
-	//{
-	    float tfocalLength = ((RealisticDiffractionCamera*)baseCamera)->getFocalLength();  // NEED TO ADD THIS STILL  
-	    float tfStop = ((RealisticDiffractionCamera*)baseCamera)->getFStop();  //NEED TO ADD THIS STILL  
-	    float tSensWidth = ((RealisticDiffractionCamera*)baseCamera)->getSensorWidth(); 
+	string myType = typeid(*baseCamera).name();
+    std::cout << "typeOfCamera: " << myType << "\n\n";
+
+    
+    string comparison("26RealisticDiffractionCamera"); //("17PerspectiveCamera"); // ("26RealisticDiffractionCamera");	//**IF COMPARISON IS 0, then strings are THE SAME!!!
+    std::cout << "comparison: " << myType.compare(comparison)  << "\n\n";
 	
-	    std::cout << "focalLength: " << tfocalLength;
-	    std:: cout << "\nfStop: " << tfStop << "\n";
-	//}
-	//else
-	//{
-	//    std::cout << "no focal length or fStop information for this camera!\n";
-	//    std::cout << "myType: " << myType << "\n";
-	//}
+    std::cout << "\n\nin constructor!!\n\n";
+    float tfocalLength = 0;
+    float tfStop = 0;
+    float tSensWidth = 0;
+
+	if (myType.compare(comparison) == 0)
+	{
+        tfocalLength = ((RealisticDiffractionCamera*)baseCamera)->getFocalLength();  // NEED TO ADD THIS STILL  
+        tfStop = ((RealisticDiffractionCamera*)baseCamera)->getFStop();  //NEED TO ADD THIS STILL  
+        tSensWidth = ((RealisticDiffractionCamera*)baseCamera)->getSensorWidth(); 
+
+        std::cout << "focalLength: " << tfocalLength;
+        std::cout << "\nfStop: " << tfStop << "\n";
+	}
+	else
+	{
+	    std::cout << "no focal length or fStop information for this camera!\n";
+	    std::cout << "myType: " << myType << "\n";
+	}
 	
     
 	SpectralImageFilm * newImageFilm = CreateSpectralImageFilm(params, filter);
