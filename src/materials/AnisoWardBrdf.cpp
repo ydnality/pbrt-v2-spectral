@@ -12,7 +12,7 @@ Spectrum AnisoWardBrdf::f(const Vector &wo, const Vector &wi) const
 {
 	Spectrum specular(0.0f);	
 	const Vector wh = wi + wo;
-	if(wh.z <= 0.0f)
+	if(wh.z == 0.0f)
 		return specular;
 	float cosi_coso = wi.z*wo.z;
 	if(cosi_coso <= 0.0f)
