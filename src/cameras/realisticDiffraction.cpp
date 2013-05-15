@@ -370,9 +370,9 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     lensU *= firstAperture;
     lensV *= firstAperture;
 
-    //experiment
-    lensU = 0;
-    lensV = 0;
+    //experiment - pinhole initial aperture! - put back in later
+    //lensU = 0;
+    //lensV = 0;
 
     //vdb visualize sampling surface
     Point pointOnLens = Point(lensU, lensV, zIntercept);   //can we even assume that lens is a flat disk, maybe this has problems later?
