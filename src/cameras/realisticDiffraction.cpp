@@ -43,6 +43,10 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
         cout << "filmdistance: " << filmdistance << "\n";
 	   float apdiameter = params.FindOneFloat("aperture_diameter", 1.0);
 	   float filmdiag = params.FindOneFloat("filmdiag", 35.0);
+       
+       float xOffset = params.FindOneFloat("x_aperture_offset", 0);
+       float yOffset = params.FindOneFloat("y_aperture_offset", 0);
+
 	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
 
 	   assert(hither != -1 && yon != -1 && shutteropen != -1 &&
@@ -62,7 +66,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
-	      specfile, filmdiag, film, diffractFlag, chromaticFlag);
+	      specfile, filmdiag, film, diffractFlag, chromaticFlag, xOffset, yOffset);
 }
 
 
@@ -76,7 +80,9 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                  float filmdiag,
 								 Film *f, 
                                  bool diffractFlag,
-                                 bool chromaticFlag)
+                                 bool chromaticFlag,
+                                 float xOffset,
+                                 float yOffset)
                                  : Camera(cam2world, sopen, sclose, f),
 								   ShutterOpen(sopen),
 								   ShutterClose(sclose),
@@ -92,7 +98,11 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     string fn = AbsolutePath(ResolveFilename(specfile));
     diffractionEnabled = diffractFlag;
     chromaticAberrationEnabled = chromaticFlag;
+    xApertureOffset = xOffset;
+    yApertureOffset = yOffset;
 
+    std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
+    std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
     std::cout <<"DiffractionEnabled: " << diffractionEnabled << "\n";
     std::cout <<"chromaticAberrationEnabled: " << chromaticAberrationEnabled << "\n";
 
@@ -438,9 +448,11 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 //cout << "xAperture: " << xAperture << "\n";
 //cout << "yAperture: " << yAperture << "\n";
 
-            if (xAperture * xAperture + yAperture * yAperture > currentAperture * currentAperture * .25)
+            if ((xAperture - xApertureOffset) * (xAperture - xApertureOffset) +  (yAperture - yApertureOffset) * (yAperture - yApertureOffset) > currentAperture * currentAperture * .25)
                 return 0.f;            
             
+//(yAperture + 1)*(yAperture + 1)
+
             //intersected = true;
             lensRadius = 1000000;
             normalVec = Vector(0,0,1);
