@@ -6,7 +6,7 @@
 # for unusual installation locations
 HAVE_EXR=1
 EXR_INCLUDES=-I/usr/local/include/OpenEXR -I/usr/include/OpenEXR -I/opt/local/include/OpenEXR 
-EXR_LIBDIR=-L/usr/local/lib -L/opt/local/lib
+EXR_LIBDIR=-L/opt/local/lib -L/usr/local/lib
 
 HAVE_LIBTIFF=0
 TIFF_INCLUDES=-I/usr/local/include -I/opt/local/include
@@ -58,12 +58,12 @@ endif
 CC=gcc
 CXX=g++
 LD=$(CXX) $(OPT) $(MARCH) 
-INCLUDE=-I. -Icore $(EXR_INCLUDES) $(TIFF_INCLUDES) -I/usr/include/gsl -I/usr/lib/
+INCLUDE=-I. -Icore $(EXR_INCLUDES) $(TIFF_INCLUDES) -I/usr/include/gsl -I/opt/local/include/gsl -I/usr/lib/
 WARN=-Wall
 CWD=$(shell pwd)
 CXXFLAGS=$(OPT) $(MARCH) $(INCLUDE) $(WARN) $(DEFS)
 CCFLAGS=$(CXXFLAGS)
-LIBS=$(LEXLIB) $(EXR_LIBDIR) $(EXRLIBS)  -L/usr/lib/ -lgsl -lgslcblas -lm 
+LIBS=$(LEXLIB) $(EXR_LIBDIR) $(EXRLIBS)  -L/opt/local/lib -L/usr/lib/ -lgsl -lgslcblas -lm 
 
 LIBSRCS=$(wildcard core/*.cpp) core/pbrtlex.cpp core/pbrtparse.cpp
 LIBSRCS += $(wildcard accelerators/*.cpp cameras/*.cpp film/*.cpp filters/*.cpp )
