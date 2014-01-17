@@ -25,8 +25,8 @@
 #pragma once
 #endif
 
-#ifndef PBRT_FILM_IMAGE_H
-#define PBRT_FILM_IMAGE_H
+#ifndef PBRT_FILM_SPECTRAL_IMAGE_H
+#define PBRT_FILM_SPECTRAL_IMAGE_H
 
 // film/image.h*
 #include "pbrt.h"
@@ -35,44 +35,63 @@
 #include "filter.h"
 #include "paramset.h"
 
+const bool debugMode = false;    //Andy added this flag for debugging
+
 // ImageFilm Declarations
-class ImageFilm : public Film {
+class SpectralImageFilm : public Film {
 public:
-    // ImageFilm Public Methods
-    ImageFilm(int xres, int yres, Filter *filt, const float crop[4],
+    // SpectralImageFilm Public Methods
+    SpectralImageFilm(int xres, int yres, Filter *filt, const float crop[4],
               const string &filename, bool openWindow);
-    ~ImageFilm() {
+    ~SpectralImageFilm() {
         delete pixels;
         delete filter;
         delete[] filterTable;
     }
-    void AddSample(const CameraSample &sample, const Spectrum &L);
+    void AddSample(const CameraSample &sample, const Spectrum &L, const Ray &currentRay);
     void Splat(const CameraSample &sample, const Spectrum &L);
     void GetSampleExtent(int *xstart, int *xend, int *ystart, int *yend) const;
     void GetPixelExtent(int *xstart, int *xend, int *ystart, int *yend) const;
     void WriteImage(float splatScale);
     void UpdateDisplay(int x0, int y0, int x1, int y1, float splatScale);
+    void ParseConversionMatrix(string filename);     //Andy Added: function that parses the conversion matrix file
+    void SetFStop(float inputFStop);        //Andy: added these for lens information and FOV output to ISET
+    void SetFocalLength(float inputFocalLength);
+    void SetSensorWidth(float sensWidth); //need this for FOV
 private:
-    // ImageFilm Private Data
+    //Andy added to allow for conversion matrix file parsing
+    float * conversionMatrix;     //actual matrix storage
+    int nCMRows;
+    int nCMCols; 
+    float * waveSpecify;
+
+    // SpectralImageFilm Private Data
     Filter *filter;
     float cropWindow[4];
     string filename;
     int xPixelStart, yPixelStart, xPixelCount, yPixelCount;
+    //Andy: modified this to allow for multispectral
     struct Pixel {
         Pixel() {
-            for (int i = 0; i < 3; ++i) Lxyz[i] = splatXYZ[i] = 0.f;
+            for (int i = 0; i < nSpectralSamples; ++i) c[i] = splatC[i] = 0.f;
             weightSum = 0.f;
         }
-        float Lxyz[3];
+        float c[nSpectralSamples];   //changed here to allow for >3 channels
         float weightSum;
-        float splatXYZ[3];
+        float splatC[nSpectralSamples];   //changed here
         float pad;
+        float Z;   //added this
     };
     BlockedArray<Pixel> *pixels;
     float *filterTable;
+    
+    //Andy: added these to support the output of lens information to ISET
+    float fStop;
+    float focalLength;
+    float sensorWidth;
 };
 
-
-ImageFilm *CreateImageFilm(const ParamSet &params, Filter *filter);
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter, Camera * baseCamera);
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter);
 
 #endif // PBRT_FILM_IMAGE_H

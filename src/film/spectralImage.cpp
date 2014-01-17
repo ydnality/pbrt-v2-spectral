@@ -27,14 +27,17 @@
 #include <iostream>
 #include <fstream>
 #include "stdafx.h"
-#include "film/image.h"
+#include "film/spectralImage.h"
 #include "spectrum.h"
 #include "parallel.h"
 #include "imageio.h"
 #include "floatfile.h"
+#include "cameras/realisticDiffraction.h"
+#include <typeinfo>
+#include <math.h>
 
-// ImageFilm Method Definitions
-ImageFilm::ImageFilm(int xres, int yres, Filter *filt, const float crop[4],
+// SpectralImageFilm Method Definitions
+SpectralImageFilm::SpectralImageFilm(int xres, int yres, Filter *filt, const float crop[4],
                      const string &fn, bool openWindow)
     : Film(xres, yres) {
     filter = filt;
@@ -73,7 +76,7 @@ ImageFilm::ImageFilm(int xres, int yres, Filter *filt, const float crop[4],
 }
 
 //Andy: this needs to be modified - modified
-void ImageFilm::AddSample(const CameraSample &sample,
+void SpectralImageFilm::AddSample(const CameraSample &sample,
                           const Spectrum &L, const Ray &currentRay) {
 
     //std::cout << "got to AddSample()\n";
@@ -143,17 +146,21 @@ void ImageFilm::AddSample(const CameraSample &sample,
                 }   
                 AtomicAdd(&pixel.weightSum, filterWt);
             }
-            pixel.Z += currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
+            pixel.Z += currentRay.maxt * filterWt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
+            //pixel.Z += currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
         }
     }
+
+   // Pixel &pixel = (*pixels)((x0 + x1)/2, (y0 + y1)/2);
+   // pixel.Z = currentRay.maxt;    //add the depth map data member to a pixel - depth is inherently stored in Ray
 }
 
 
 
 //Andy: this needs to be modified to allow for more than 3 channel splatting.  Try to understand this more.  Do we need depth map processing here?
-void ImageFilm::Splat(const CameraSample &sample, const Spectrum &L) {
+void SpectralImageFilm::Splat(const CameraSample &sample, const Spectrum &L) {
     if (L.HasNaNs()) {
-        Warning("ImageFilm ignoring splatted spectrum with NaN values");
+        Warning("SpectralImageFilm ignoring splatted spectrum with NaN values");
         return;
     }
     
@@ -176,7 +183,7 @@ void ImageFilm::Splat(const CameraSample &sample, const Spectrum &L) {
 }
 
 
-void ImageFilm::GetSampleExtent(int *xstart, int *xend,
+void SpectralImageFilm::GetSampleExtent(int *xstart, int *xend,
                                 int *ystart, int *yend) const {
     *xstart = Floor2Int(xPixelStart + 0.5f - filter->xWidth);
     *xend   = Floor2Int(xPixelStart + 0.5f + xPixelCount  +
@@ -188,7 +195,7 @@ void ImageFilm::GetSampleExtent(int *xstart, int *xend,
 }
 
 
-void ImageFilm::GetPixelExtent(int *xstart, int *xend,
+void SpectralImageFilm::GetPixelExtent(int *xstart, int *xend,
                                int *ystart, int *yend) const {
     *xstart = xPixelStart;
     *xend   = xPixelStart + xPixelCount;
@@ -197,7 +204,7 @@ void ImageFilm::GetPixelExtent(int *xstart, int *xend,
 }
 
 //Andy added
-void ImageFilm::ParseConversionMatrix(string filename){
+void SpectralImageFilm::ParseConversionMatrix(string filename){
     string fn = AbsolutePath(ResolveFilename(filename));
     nCMRows = nSpectralSamples;
     nCMCols = nSpectralSamples;
@@ -257,7 +264,7 @@ void ImageFilm::ParseConversionMatrix(string filename){
 }
 
 //Andy changed
-void ImageFilm::WriteImage(float splatScale) {
+void SpectralImageFilm::WriteImage(float splatScale) {
 
 	//static const int sampledLambdaStart = 400;
 	//static const int sampledLambdaEnd = 700;
@@ -340,7 +347,7 @@ void ImageFilm::WriteImage(float splatScale) {
                 {
                     tempSum += conversionMatrix[row * nCMCols + iter] * finalC[nSpectralSamples * (y * xPixelCount + x) + iter];    //matrix multiplication by column vector
                 }
-                finalCMultiplied[nCMRows * (y *  xPixelCount + x) + row] = tempSum;  //check this later
+                finalCMultiplied[nCMRows * (x *  yPixelCount + y) + row] = tempSum;  //check this later
             }
 
         }
@@ -350,7 +357,7 @@ void ImageFilm::WriteImage(float splatScale) {
     std::ofstream myfile;
     int lastPos = filename.find_last_of(".");
     string newFileName = filename.substr(0, lastPos) + ".dat";
-
+    string newFileNameDM = filename.substr(0, lastPos) + "_DM.dat";
     
     myfile.open (newFileName.c_str());
 
@@ -361,12 +368,26 @@ void ImageFilm::WriteImage(float splatScale) {
     //    myfile << waveSpecify[i] << " ";
     //myfile << "\n";
 
+    //print out field of view information
+    //float fieldOfView = 8;
+    float d = sensorWidth;
+    float fieldOfView = 2 * atan(d/(2 * focalLength)) / 3.1415926539 * 180;
+    
+    //float aperture = 2;
+    //float focalLength = 50;
+    myfile << focalLength << " " << fStop << " " << fieldOfView << "\n";
+
+std::cout << "outputing: " << focalLength << " " << fStop << " " << fieldOfView << "\n";
+    //std::cout << "
+
     myfile.close();
 
     //open file for binary writing purposes
     FILE * spectralImageBin;
 	spectralImageBin = fopen(newFileName.c_str(), "a");
 
+    FILE * depthMapBin;
+    depthMapBin = fopen(newFileNameDM.c_str(), "a");
 
     //TODO: perhaps dump the conversion matrix here
 
@@ -377,6 +398,7 @@ void ImageFilm::WriteImage(float splatScale) {
 		{ 
             double r = (double)finalCMultiplied[nCMRows * j + i];
             fwrite((void*)(&r), sizeof(r), 1, spectralImageBin);
+
             //myfile << finalCMultiplied[nCMRows * j + i];
             //if (j < nPix - 1)
             //    myfile << " ";
@@ -385,6 +407,14 @@ void ImageFilm::WriteImage(float splatScale) {
     }
 
     fclose(spectralImageBin);
+
+    //Write Binary depth map file
+    for (int j = 0; j < nPix; j++)
+    {
+        double r2 = (double)finalZ[3 * j];
+        fwrite((void*)(&r2), sizeof(r2), 1, depthMapBin);
+    }   
+    fclose(depthMapBin);
 
     //::WriteImage(filename, rgb, NULL, xPixelCount, yPixelCount,
     //             xResolution, yResolution, xPixelStart, yPixelStart);
@@ -402,12 +432,78 @@ void ImageFilm::WriteImage(float splatScale) {
 }
 
 
-void ImageFilm::UpdateDisplay(int x0, int y0, int x1, int y1,
+void SpectralImageFilm::UpdateDisplay(int x0, int y0, int x1, int y1,
     float splatScale) {
 }
 
+//Andy: added this additional construction function to allow for camera pointer - for FOV calculations
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter, Camera * baseCamera) 
+{
+
+    
+    // ANDY: THIS WILL REQUIRE SOME RETHINKING FOR MAXIMUM COMPATIBILITY!!!    ... but works for now.  but what if baseCamera is not a compatible type?!
+    
+	//baseCamera contains information about the camera: information such as focal length is very important to calculate field of view.
+	//float focalLength = baseCamera->focalLength
+	//also need film dimensions
+	//float horizontalFOV = 2 * arctan(d/2f)
+	
+	//RealisticDiffractionCamera* 
+    //dynamic_cast<RealisticDiffractionCamera*> (baseCamera);
+	
+	string myType = typeid(*baseCamera).name();
+    std::cout << "typeOfCamera: " << myType << "\n\n";
+
+    
+    string comparison("26RealisticDiffractionCamera"); //("17PerspectiveCamera"); // ("26RealisticDiffractionCamera");	//**IF COMPARISON IS 0, then strings are THE SAME!!!
+    std::cout << "comparison: " << myType.compare(comparison)  << "\n\n";
+	
+    std::cout << "\n\nin constructor!!\n\n";
+    float tfocalLength = 0;
+    float tfStop = 0;
+    float tSensWidth = 0;
+
+	if (myType.compare(comparison) == 0)
+	{
+        tfocalLength = ((RealisticDiffractionCamera*)baseCamera)->getFocalLength();  // NEED TO ADD THIS STILL  
+        tfStop = ((RealisticDiffractionCamera*)baseCamera)->getFStop();  //NEED TO ADD THIS STILL  
+        tSensWidth = ((RealisticDiffractionCamera*)baseCamera)->getSensorWidth(); 
+
+        std::cout << "focalLength: " << tfocalLength;
+        std::cout << "\nfStop: " << tfStop << "\n";
+	}
+	else
+	{
+	    std::cout << "no focal length or fStop information for this camera!\n";
+	    std::cout << "myType: " << myType << "\n";
+	}
+	
+    
+	SpectralImageFilm * newImageFilm = CreateSpectralImageFilm(params, filter);
+	newImageFilm->SetFStop(tfStop);
+	newImageFilm->SetFocalLength(tfocalLength);
+	newImageFilm->SetSensorWidth(tSensWidth);
+    return newImageFilm;
+}
+
+
+ //Andy: added these for lens information and FOV output to ISET
+void SpectralImageFilm::SetFStop(float inputFStop)
+{
+    fStop = inputFStop;       
+}
+void SpectralImageFilm::SetFocalLength(float inputFocalLength)
+{
+    focalLength = inputFocalLength;
+}
+void SpectralImageFilm::SetSensorWidth(float sensWidth)
+{
+    sensorWidth = sensWidth;
+}
+
+
 //Andy: added conversionmatrix file here
-ImageFilm *CreateImageFilm(const ParamSet &params, Filter *filter) {
+SpectralImageFilm *CreateSpectralImageFilm(const ParamSet &params, Filter *filter) {
     string filename = params.FindOneString("filename", PbrtOptions.imageFile);
     if (filename == "")
 #ifdef PBRT_HAS_OPENEXR
@@ -434,7 +530,7 @@ ImageFilm *CreateImageFilm(const ParamSet &params, Filter *filter) {
 
     
     //Andy changed to allow for parsing of conversionmatrixfile name
-    ImageFilm * newFilm = new ImageFilm(xres, yres, filter, crop, filename, openwin);
+    SpectralImageFilm * newFilm = new SpectralImageFilm(xres, yres, filter, crop, filename, openwin);
     string conversionMatrixFilename = params.FindOneString("conversionmatrixfile", "");   //params contains all the parsed attributes of film... we now look for the "conversionmatrixfile" entry, which is a string
     std::cout<< "\nconversionMatrixFilename: " << conversionMatrixFilename << "\n\n";
     newFilm->ParseConversionMatrix(conversionMatrixFilename);

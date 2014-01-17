@@ -17,33 +17,45 @@ struct LensElement{
     float aperture;
 };
 
-class RealisticCamera : public Camera {
+class RealisticDiffractionCamera : public Camera {
 public:
-   RealisticCamera(const AnimatedTransform &cam2world,
+   RealisticDiffractionCamera(const AnimatedTransform &cam2world,
       float hither, float yon, float sopen,
       float sclose, float filmdistance, float aperture_diameter,
       const string &specfile,
       float filmdiag,
-	  Film *film);
-   ~RealisticCamera();
+	  Film *film,
+      bool diffractionFlag,
+      bool chromaticFlag,
+      float xOffset,
+      float yOffset);
+   ~RealisticDiffractionCamera();
    float GenerateRay(const CameraSample &sample, Ray *) const;
    float GenerateCameraRay(const CameraSample &sample, Ray *) const;
     void runLensFlare(const Scene * scene, const Renderer * renderer) const;
+   float getFStop();
+   float getFocalLength();
+   float getSensorWidth();
 private:
    float ShutterOpen;
    float ShutterClose;
    float filmDiag;
    float filmDistance;
-    gsl_rng * r;
+   float xApertureOffset;
+   float yApertureOffset;
+   gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
-   bool IntersectLensEl(const Ray &r, float *tHit, float radius, float dist,  Vector & normalVec) const
-
+   bool IntersectLensEl(const Ray &r, float *tHit, float radius, float dist,  Vector & normalVec) const;
+   bool diffractionEnabled;
+   bool chromaticAberrationEnabled;
+   float fstop;
+   float focalLength;
 
 ;
 };
 
-RealisticCamera *CreateRealisticCamera(const ParamSet &params,
+RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &params,
         const AnimatedTransform &cam2world, Film *film);
 
 #endif

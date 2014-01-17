@@ -334,8 +334,13 @@ public:
     mutable float mint, maxt;
     float time;
     int depth;
+    float wavelength;    //Andy added
 };
 
+/*class RaySpectral : public Ray {
+    //additional information for spectral ray
+    float wavelength;
+};*/
 
 class RayDifferential : public Ray {
 public:
@@ -372,6 +377,10 @@ public:
     Vector rxDirection, ryDirection;
 };
 
+/*class RayDifferentialSpectral : public RayDifferential {
+    //additional information for spectral ray
+    float wavelength;
+};*/
 
 class BBox {
 public:

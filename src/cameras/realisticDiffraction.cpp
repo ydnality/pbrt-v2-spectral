@@ -1,11 +1,11 @@
 // cameras/realistic.cpp*
 #include "stdafx.h"
-#include "cameras/realistic.h"
+#include "cameras/realisticDiffraction.h"
 #include "paramset.h"
 #include "sampler.h"
 #include "montecarlo.h"
 #include "filters/box.h"
-#include "film/image.h"
+#include "film/spectralImage.h"
 #include "samplers/stratified.h"
 #include "intersection.h"
 #include "renderer.h"
@@ -29,37 +29,60 @@
 
 using namespace std;
 
-RealisticCamera *CreateRealisticCamera(const ParamSet &params,
+RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &params,
         const AnimatedTransform &cam2world, Film *film) {
 	   // Extract common camera parameters from \use{ParamSet}
+
 	   float hither = params.FindOneFloat("hither", -1);
 	   float yon = params.FindOneFloat("yon", -1);
 	   float shutteropen = params.FindOneFloat("shutteropen", -1);
 	   float shutterclose = params.FindOneFloat("shutterclose", -1);
-	   // Realistic camera-specific parameters
+	   // RealisticDiffraction camera-specific parameters
 	   string specfile = params.FindOneString("specfile", "");
 	   float filmdistance = params.FindOneFloat("filmdistance", 70.0); // about 70 mm default to film
         cout << "filmdistance: " << filmdistance << "\n";
-	   float fstop = params.FindOneFloat("aperture_diameter", 1.0);
+	   float apdiameter = params.FindOneFloat("aperture_diameter", 1.0);
 	   float filmdiag = params.FindOneFloat("filmdiag", 35.0);
+       
+       float xOffset = params.FindOneFloat("x_aperture_offset", 0);
+       float yOffset = params.FindOneFloat("y_aperture_offset", 0);
+
+	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
+
 	   assert(hither != -1 && yon != -1 && shutteropen != -1 &&
 	      shutterclose != -1 && filmdistance!= -1);
 	   if (specfile == "") {
 	       Severe( "No lens spec file supplied!\n" );
 	   }
 
-	   return new RealisticCamera(cam2world, hither, yon,
-	      shutteropen, shutterclose, filmdistance, fstop,
-	      specfile, filmdiag, film);
+       //flags for enabling diffraction - default yes
+       float diffractionEnabled = params.FindOneFloat("diffractionEnabled", 1.0);
+       bool diffractFlag = diffractionEnabled == 1.f;
+       //flags for enabling chromatic aberration - default no
+       float chromaticAberrationEnabled = params.FindOneFloat("chromaticAberrationEnabled", 0.0);
+       bool chromaticFlag =  chromaticAberrationEnabled ==1.f;
+
+        //TODO: read DEPTHMAP OR NOT  PARAMETER HERE!!
+
+	   return new RealisticDiffractionCamera(cam2world, hither, yon,
+	      shutteropen, shutterclose, filmdistance, apdiameter,
+	      specfile, filmdiag, film, diffractFlag, chromaticFlag, xOffset, yOffset);
 }
 
-RealisticCamera::RealisticCamera(const AnimatedTransform &cam2world,
+
+
+
+RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &cam2world,
                                  float hither, float yon,
-                                 float sopen, float sclose,
+                                 float sopen, float sclose,  
                                  float filmdistance, float aperture_diameter_,
                                  const string &specfile,
                                  float filmdiag,
-								 Film *f)
+								 Film *f, 
+                                 bool diffractFlag,
+                                 bool chromaticFlag,
+                                 float xOffset,
+                                 float yOffset)
                                  : Camera(cam2world, sopen, sclose, f),
 								   ShutterOpen(sopen),
 								   ShutterClose(sclose),
@@ -73,7 +96,15 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &cam2world,
     filmDistance = filmdistance;
     //parse the specfile 
     string fn = AbsolutePath(ResolveFilename(specfile));
+    diffractionEnabled = diffractFlag;
+    chromaticAberrationEnabled = chromaticFlag;
+    xApertureOffset = xOffset;
+    yApertureOffset = yOffset;
 
+    std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
+    std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
+    std::cout <<"DiffractionEnabled: " << diffractionEnabled << "\n";
+    std::cout <<"chromaticAberrationEnabled: " << chromaticAberrationEnabled << "\n";
 
     vector<float> vals;
 
@@ -84,15 +115,22 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &cam2world,
     }
 
     //check to see if the number of floats is a multiple of 4
-    if (vals.size() % 4 != 0)
+    if ((vals.size()-1) % 4 != 0)
     {
-        Warning("Wrong number of float values in lens file!");
+        Warning("Wrong number of float values in lens file!  Check file format!  Did you forget to specify the focal length?");
         return;
     }
 
-    for (int i = 0; i < vals.size(); i+=4)
+    float focallength = vals[0];   //read the focal length - this is new
+    focalLength = focallength;
+    std::cout << "focalLength :" << focalLength << "\n";
+    fstop = focalLength/aperture_diameter_;
+
+    std::cout << "apertureDiameter: " << aperture_diameter_ << "\n";
+    std::cout << "fstop: f/" << fstop << "\n";
+    
+    for (int i = 1; i < vals.size(); i+=4)
     {
-        
         std::cout << vals[i] << "  " << vals[i+1] << "  " << vals[i+2] << "  " << vals[i+3] << "\n";
         LensElement currentLensEl;
         currentLensEl.radius = vals[i];
@@ -124,15 +162,29 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &cam2world,
        r = gsl_rng_alloc (T);
 
 
+    //TODO: TELL FILM THAT THIS IS DEPTH MAP PROCESSING
+
+
 }
 
 
-RealisticCamera::~RealisticCamera()
+RealisticDiffractionCamera::~RealisticDiffractionCamera()
 {
 
 }
 
-void RealisticCamera::runLensFlare(const Scene * scene, const Renderer * renderer) const
+
+float RealisticDiffractionCamera::getFStop()
+{
+	return fstop;
+}
+
+float RealisticDiffractionCamera::getFocalLength()
+{
+	return focalLength;
+}
+
+void RealisticDiffractionCamera::runLensFlare(const Scene * scene, const Renderer * renderer) const
 {
 /*    std::cout << "in runLensFlare()!\n";
     
@@ -152,7 +204,7 @@ void RealisticCamera::runLensFlare(const Scene * scene, const Renderer * rendere
     
 }
 
-bool RealisticCamera::IntersectLensEl(const Ray &r, float *tHit, float radius, float dist, Vector & normalVec) const{
+bool RealisticDiffractionCamera::IntersectLensEl(const Ray &r, float *tHit, float radius, float dist, Vector & normalVec) const{
     float phi;
     Point phit;
     // Transform _Ray_ to object space
@@ -263,7 +315,16 @@ bool RealisticCamera::IntersectLensEl(const Ray &r, float *tHit, float radius, f
     return true;
 }
 
-float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
+float RealisticDiffractionCamera::getSensorWidth()
+{
+    
+    float aspectRatio = (float)film->xResolution/(float)film->yResolution;
+    //float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    float width = filmDiag /sqrt((1.f + 1.f/(aspectRatio * aspectRatio)));
+    return width;
+}
+
+float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
 {
   // YOUR CODE HERE -- make that ray!
 
@@ -282,7 +343,8 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
 //cout << "startingPoint.z: " << startingPoint.z;
     
     float aspectRatio = (float)film->xResolution/(float)film->yResolution;
-    float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    //float width = filmDiag /sqrt((1.f + aspectRatio * aspectRatio));
+    float width = filmDiag /sqrt((1.f + 1.f/(aspectRatio * aspectRatio)));  
     float height = width/aspectRatio;
     
     startingPoint.x *= width/2.f;
@@ -297,23 +359,38 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
     float firstAperture = lensEls[lensEls.size()-1].aperture/2;
     float firstRadius = lensEls[lensEls.size()-1].radius;
 
+
+
     //special case for when aperture is 1st element
     float zIntercept = 0;
     if (firstRadius ==0)
         zIntercept = 0;
     else
         zIntercept = (-firstRadius - sqrt(firstRadius * firstRadius - firstAperture * firstAperture));
+
+    //experiment
+    zIntercept = 0;
+
 //std::cout << " firstRadius: " << firstRadius;
 //std::cout << " firstAperture: " << firstAperture;
 //std::cout << " zIntercept: " << zIntercept;
+
+    //TODO: adjust first aperture depending on if we are using depth-map mode or NOT
+
     lensU *= firstAperture;
     lensV *= firstAperture;
+
+    //experiment - pinhole initial aperture! - put back in later
+    //lensU = 0;
+    //lensV = 0;
+
     //vdb visualize sampling surface
     Point pointOnLens = Point(lensU, lensV, zIntercept);   //can we even assume that lens is a flat disk, maybe this has problems later?
-   
+   float tempWavelength = ray->wavelength; 
     *ray = Ray(Point(0,0,0), Normalize(Vector(startingPoint)), 0.f, INFINITY);
     ray->o = startingPoint;    //initialize ray origin
     ray->d = Normalize(pointOnLens - ray->o);
+    ray->wavelength = tempWavelength;  //so that wavelength information is retained.
 
         // vdb_color(.7, 0, 0);
         // vdb_point(pointOnLens.x, pointOnLens.y, pointOnLens.z); 
@@ -371,9 +448,11 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
 //cout << "xAperture: " << xAperture << "\n";
 //cout << "yAperture: " << yAperture << "\n";
 
-            if (xAperture * xAperture + yAperture * yAperture > currentAperture * currentAperture * .25)
+            if ((xAperture - xApertureOffset) * (xAperture - xApertureOffset) +  (yAperture - yApertureOffset) * (yAperture - yApertureOffset) > currentAperture * currentAperture * .25)
                 return 0.f;            
             
+//(yAperture + 1)*(yAperture + 1)
+
             //intersected = true;
             lensRadius = 1000000;
             normalVec = Vector(0,0,1);
@@ -442,6 +521,16 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
                 if (n2 ==0)
                     n2 = 1;
 
+                //add chromatic abberation effect (changing index of refraction) here - basic for now
+                if (chromaticAberrationEnabled)
+                {
+                   // std::cout << "ray->wavelength: " << ray->wavelength << "\n";
+                    if (n1 != 1)
+                        n1 = (ray->wavelength - 550) * -.04/(300)  +  n1;              //should be .04     
+                    if (n2 != 1)
+                        n2 = (ray->wavelength - 550) * -.04/(300)  +  n2;
+                }
+
                 Vector s1 = ray->d;
                 if (lensRadius >0)
                     normalVec = -normalVec;
@@ -490,109 +579,91 @@ float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
         }
 
 
-                //--------------diffraction scattering-------------
-                //srand ( time(NULL) );
-                //generate random 2D gaussian
-                //double U1 = (rand() % 1000000)/ 999999;  //random double between 0 and 1
-                //double V1 = (rand() % 1000000)/ 999999;  //random double between 0 and 1
-                
+        // --------------------add effect of diffraction----------------
 
+        if (diffractionEnabled)
+        {
+            double initx = 0;
+            double inity = 0;       
+            double * x = &initx;
+            double * y = &inity;   
+            //double currentAperture = lensRadius * 2;
 
+            //calculate min distance direction
+           
+            //calculate radius
+            //Point intersectPoint(lensU, lensV, 0.f);
+            double radius = sqrt(intersectPoint.x * intersectPoint.x + intersectPoint.y * intersectPoint.y );
+
+    //cout << "radius: " << radius << "\n";
+    //std::cout << "rayWavelength: " << ray->wavelength << "\n";
+
+            //calculate direction 
+            Vector direction(intersectPoint.x, intersectPoint.y, 0);
+            
+            Vector orthoDirection(-intersectPoint.y, intersectPoint.x, 0);  
+                       // double direction = atan (intersectPoint.y/intersectPoint.x);
+            
+            double a = currentAperture/2 - radius;
+            double b = sqrt((currentAperture/2 * currentAperture/2) - radius * radius);
+
+            a = a;
+            b = b;
+            double pi = 3.14159265359;
+            //double lambda = .000000550;  //550 nanometers for now
+            double lambda = ray->wavelength * 1e-9;
+            double sigma_x = atan(1/(2 * a *.001 * 2 * pi/lambda)); 
+            double sigma_y = atan(1/(2 *b * .001 * 2 * pi/lambda)); 
+
+            //gsl_ran_bivariate_gaussian (const gsl_rng * r, double sigma_x, double sigma_y, double rho, double * x, double * y)             
+           gsl_ran_bivariate_gaussian (r, sigma_x, sigma_y, 0, x, y);    //experiment for now
+                   
+            //add r.v. in directions of direction and orthoDirection
+
+            //calculate component of these vectors based on 2 random degrees
+            direction = Normalize(direction);
+            orthoDirection = Normalize(orthoDirection);
+
+            float noiseA = (float)(*x);
+            float noiseB = (float)(*y);
+
+             //project the original ray onto the new bases         
+             double projA = (ray->d.x * direction.x + ray->d.y * direction.y)/sqrt(direction.x * direction.x + direction.y * direction.y);
+             double projB = (ray->d.x * orthoDirection.x + ray->d.y * orthoDirection.y)/sqrt(orthoDirection.x * orthoDirection.x + orthoDirection.y * orthoDirection.y);
+             double projC = ray->d.z;
+
+             double rA = sqrt(projA * projA + projC * projC);
+             double rB = sqrt(projB * projB + projC * projC);
+             double thetaA = acos(projA/rA);          
+             double thetaB = acos(projB/rB);
+
+             //add uncertainty
+             thetaA = thetaA + noiseA;   //removed for now
+             thetaB = thetaB + noiseB;
+             
+             //convert angles back into cartesian coordinates, but in a,b space
+             double newProjA = cos(thetaA) * rA;
+
+             ray->d.z = sin(thetaA) * rA;
+
+             projC = ray->d.z;
+             rB = sqrt(projB * projB + projC * projC);
+           
+             //rB = sqrt(ray->d.y * ray->d.y + ray->d.z * ray->d.z); // THIS LINE IS WRONG!!!!! 
+
+            //need to recalculate thetaB after you modify z (this is a new addition, also questionable)          
+            thetaB = acos(projB/rB);
+
+            double newProjB = cos(thetaB) * rB;
+            ray->d.z = sin(thetaB) * rB;
         
-        double initx = 0;
-        double inity = 0;       
-        double * x = &initx;
-        double * y = &inity;   
+            //convert from ab space back to x,y space
+            ray->d.x = direction.x * newProjA + orthoDirection.x * newProjB;
+            ray->d.y = direction.y * newProjA + orthoDirection.y * newProjB;
 
-
-        //calculate min distance direction
-       
-        //calculate radius
-        double radius = sqrt(intersectPoint.x * intersectPoint.x + intersectPoint.y * intersectPoint.y );
-
-//cout << "radius: " << radius << "\n";
-
-        //calculate direction 
-        Vector direction(intersectPoint.x, intersectPoint.y, 0);
-        
-        Vector orthoDirection(-intersectPoint.y, intersectPoint.x, 0);  
-                   // double direction = atan (intersectPoint.y/intersectPoint.x);
-        
-        double a = currentAperture/2 - radius;
-        double b = sqrt((currentAperture/2 * currentAperture/2) - radius * radius);
-
-        a = a;
-        b = b;
-        double pi = 3.14159265359;
-        double lambda = .000000550;  //550 nanometers for now
-        
-        double sigma_x = atan(1/(2 * a *.001 * 2 * pi/lambda)); 
-        double sigma_y = atan(1/(2 *b * .001 * 2 * pi/lambda)); 
-                //gsl_ran_bivariate_gaussian (const gsl_rng * r, double sigma_x, double sigma_y, double rho, double * x, double * y)             
-       gsl_ran_bivariate_gaussian (r, sigma_x, sigma_y, 0, x, y);    //experiment for now
-               
-                //add r.v. in directions of direction and orthoDirection
-
-//cout << "sigma_x: " << sigma_x << "\n";
-//cout << "sigma_y: " << sigma_y << "\n";
-
-
-                //calculate component of these vectors based on 2 random degrees
-        direction = Normalize(direction);
-        orthoDirection = Normalize(orthoDirection);
-
-
-        float noiseA = (float)(*x);
-        float noiseB = (float)(*y);
-
-        
-         //project the original ray onto the new bases         
-         double projA = (ray->d.x * direction.x + ray->d.y * direction.y)/sqrt(direction.x * direction.x + direction.y * direction.y);
-         double projB = (ray->d.x * orthoDirection.x + ray->d.y * orthoDirection.y)/sqrt(orthoDirection.x * orthoDirection.x + orthoDirection.y * orthoDirection.y);
-         double projC = ray->d.z;
-
-         double rA = sqrt(projA * projA + projC * projC);
-         double rB = sqrt(projB * projB + projC * projC);
-         double thetaA = acos(projA/rA);          
-         double thetaB = acos(projB/rB);
-//cout << "thetaA: " << thetaA << "\n";
-//cout << "thetaB: " << thetaB << "\n";
-
-         //add uncertainty
-         //thetaA = thetaA + noiseA;
-         //thetaB = thetaB + noiseB;
-//cout << "noiseA" << noiseA << "\n";
-//cout << "noiseB" << noiseB << "\n";
-
-    //if (abs(noiseA) > 3 || abs(noiseB) > 3)
-    //    cout << "LARGE NOISE!!\n";
-//cout << "thetaANoise: " << thetaA << "\n";
-//cout << "thetaBNoise: " << thetaB << "\n";
-
-         
-         //convert angles back into cartesian coordinates, but in a,b space
-         double newProjA = cos(thetaA) * rA;
-
-         ray->d.z = sin(thetaA) * rA;
-
-         projC = ray->d.z;
-         rB = sqrt(projB * projB + projC * projC);
-       
-         //rB = sqrt(ray->d.y * ray->d.y + ray->d.z * ray->d.z); // THIS LINE IS WRONG!!!!! 
-
-        //need to recalculate thetaB after you modify z (this is a new addition, also questionable)          
-        thetaB = acos(projB/rB);
-
-        double newProjB = cos(thetaB) * rB;
-        ray->d.z = sin(thetaB) * rB;
-    
-        //convert from ab space back to x,y space
-        ray->d.x = direction.x * newProjA + orthoDirection.x * newProjB;
-        ray->d.y = direction.y * newProjA + orthoDirection.y * newProjB;
-
-        ray->d = Normalize(ray->d);       
-
-                //-------------end diffraction scattering-----------            
+            ray->d = Normalize(ray->d);       
+        }
+        //------------end diffraction-----------------        
     }
 
     ray->time = Lerp(sample.time, ShutterOpen, ShutterClose);
