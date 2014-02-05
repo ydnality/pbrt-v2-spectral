@@ -43,6 +43,7 @@ private:
    float filmDistance;
    float xApertureOffset;
    float yApertureOffset;
+   bool pinholeEnabled;
    gsl_rng * r;
    Film * film;
    //vector<LensElement> lensEls;
