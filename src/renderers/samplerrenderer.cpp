@@ -93,6 +93,11 @@ std::cout << "right Before sampling loop!" ;
         // Generate camera rays and compute radiance along rays
         for (int i = 0; i < sampleCount; ++i) {
             int s = i % nSpectralSamples;    //Andy plan: this loops through all wavelengths.
+            
+            // Ben: I think we can start a wavelength loop here
+            //  iterate all s in loop, instead of taking i mod nSpectralSamples
+            //  or maybe the wavelength loop needs to happein outside, in GetMoreSamples()
+            //  in that case, we'd want sampleCound always to be a multiple of nSpectralSamples
 
             //wavelength assigned to ray
             rays[i].wavelength = sampledLambdaStart + (sampledLambdaEnd-sampledLambdaStart)/nSpectralSamples * s;
@@ -150,6 +155,8 @@ std::cout << "right Before sampling loop!" ;
                     Ls[i] = Spectrum(0.f);
                 }
             }
+            
+            // Ben: instead, why don't we use loop to fill in all wavelengths correctly?
 
             //loop through the spectrum and eliminate all values that aren't the current wavelength
             for (int j = 0; j < nSpectralSamples; j++)
