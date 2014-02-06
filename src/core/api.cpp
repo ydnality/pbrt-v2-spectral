@@ -48,6 +48,7 @@
 #include "film/spectralImage.h"
 // Ben
 #include "film/image.h"
+#include "film/spectralImageNoCamera.h"
 
 #include "filters/box.h"
 #include "filters/gaussian.h"
@@ -672,7 +673,7 @@ Film *MakeFilm(const string &name,
     const ParamSet &paramSet, Filter *filter) {    //original function
     Film *film = NULL;
     if (name == "image")
-        film = CreateSpectralImageFilm(paramSet, filter);   
+        film = CreateSpectralImageNoCameraFilm(paramSet, filter);
     else
         Warning("Film \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
@@ -685,7 +686,7 @@ Film *MakeFilm(const string &name,
     const ParamSet &paramSet, Filter *filter, Camera * baseCamera) {  //andy: this is an overloaded function... added the camera pointer for FOV calculation
     Film *film = NULL;
     if (name == "image")
-        film = CreateSpectralImageFilm(paramSet, filter, baseCamera);   //andy: might want to change this back to regular image film
+        film = CreateSpectralImageNoCameraFilm(paramSet, filter);   //ben: revised film type that writes multispectral but doesn't use special camera.
     else if (name =="spectralImage")
     {
         //film = CreateSpectralImageFilm(paramSet, filter);  
