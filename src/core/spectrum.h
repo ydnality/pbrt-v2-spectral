@@ -34,8 +34,8 @@
 
 // Spectrum Utility Declarations
 static const int sampledLambdaStart = 400;
-static const int sampledLambdaEnd = 700;
-static const int nSpectralSamples = 31; //andy changed - 11/06/12
+static const int sampledLambdaEnd = 710;
+static const int nSpectralSamples = 32; //andy changed - 11/06/12 - changed to 32 on 2/5/2015
 
 /*static const int sampledLambdaStart = 395;   //Andy changed so that there are 31 channels
 static const int sampledLambdaEnd = 705;     //Andy TODO: need to confirm that this binning procedure is indeed how it works...

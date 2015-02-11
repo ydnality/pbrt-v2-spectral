@@ -24,11 +24,14 @@ public:
       float sclose, float filmdistance, float aperture_diameter,
       const string &specfile,
       float filmdiag,
+      float curveradius,
 	  Film *film,
       bool diffractionFlag,
       bool chromaticFlag,
       float xOffset,
       float yOffset);
+
+      
    ~RealisticDiffractionCamera();
    float GenerateRay(const CameraSample &sample, Ray *) const;
    float GenerateCameraRay(const CameraSample &sample, Ray *) const;
@@ -40,6 +43,7 @@ private:
    float ShutterOpen;
    float ShutterClose;
    float filmDiag;
+   float curveRadius;
    float filmDistance;
    float xApertureOffset;
    float yApertureOffset;
