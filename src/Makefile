@@ -6,7 +6,7 @@
 # for unusual installation locations
 HAVE_EXR=1
 EXR_INCLUDES=-I/usr/local/include/OpenEXR -I/usr/include/OpenEXR -I/opt/local/include/OpenEXR 
-EXR_LIBDIR=-L/opt/local/lib -L/usr/local/lib
+EXR_LIBDIR=-L/usr/local/lib -L/usr/lib -L/opt/local/lib
 
 HAVE_LIBTIFF=0
 TIFF_INCLUDES=-I/usr/local/include -I/opt/local/include
