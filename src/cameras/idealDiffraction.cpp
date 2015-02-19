@@ -38,7 +38,7 @@ idealDiffractionCamera *CreateIdealDiffractionCamera(const ParamSet &params,
        		cout << "filmdistance: " << filmdistance << "\n";
 	   float apdiameter = params.FindOneFloat("aperture_diameter", 1.0);
 	   float filmdiag = params.FindOneFloat("filmdiag", 35.0);
-       
+
        float xOffset = params.FindOneFloat("x_aperture_offset", 0);
        float yOffset = params.FindOneFloat("y_aperture_offset", 0);
 

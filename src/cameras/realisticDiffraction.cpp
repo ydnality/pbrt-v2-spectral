@@ -43,6 +43,8 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
         cout << "filmdistance: " << filmdistance << "\n";
 	   float apdiameter = params.FindOneFloat("aperture_diameter", 1.0);
 	   float filmdiag = params.FindOneFloat("filmdiag", 35.0);
+       float curveradius = params.FindOneFloat("curveRadius", 0);
+       
        
        float xOffset = params.FindOneFloat("x_aperture_offset", 0);
        float yOffset = params.FindOneFloat("y_aperture_offset", 0);
@@ -66,7 +68,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
-	      specfile, filmdiag, film, diffractFlag, chromaticFlag, xOffset, yOffset);
+	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset);
 }
 
 
@@ -78,6 +80,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                  float filmdistance, float aperture_diameter_,
                                  const string &specfile,
                                  float filmdiag,
+                                 float curveradius,
 								 Film *f, 
                                  bool diffractFlag,
                                  bool chromaticFlag,
@@ -100,6 +103,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     chromaticAberrationEnabled = chromaticFlag;
     xApertureOffset = xOffset;
     yApertureOffset = yOffset;
+    curveRadius = curveradius;
 
     std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
     std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
@@ -128,6 +132,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 
     std::cout << "apertureDiameter: " << aperture_diameter_ << "\n";
     std::cout << "fstop: f/" << fstop << "\n";
+    std:: cout << "curveRadius: " << curveRadius << "\n";    
     
     for (int i = 1; i < vals.size(); i+=4)
     {
@@ -350,6 +355,23 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     startingPoint.x *= width/2.f;
     startingPoint.y *= height/2.f;
 
+	//curved Sensor stuff	
+	if (curveRadius != 0)
+	{
+		//convert to angle
+		float startTheta = startingPoint.x/curveRadius;
+		float startPhi = startingPoint.y/curveRadius;
+		
+		//convert to x,y,z, on sphere
+		startingPoint.x = curveRadius * cos(startPhi) * sin(startTheta);   //sign convention needs to be checked
+		startingPoint.z = curveRadius * cos(startPhi) * cos(startTheta);
+		startingPoint.y = curveRadius * sin(startPhi);
+		float sphereCenter =  (-filmDistance - curveRadius) ;
+		startingPoint.z = sphereCenter + startingPoint.z;  //check the sign convention here...  
+		
+	}
+	
+	
     float lensU, lensV;
     float prevN = 1;
 
@@ -369,7 +391,7 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
         zIntercept = (-firstRadius - sqrt(firstRadius * firstRadius - firstAperture * firstAperture));
 
     //experiment
-    zIntercept = 0;
+    //zIntercept = 0;
 
 //std::cout << " firstRadius: " << firstRadius;
 //std::cout << " firstAperture: " << firstAperture;

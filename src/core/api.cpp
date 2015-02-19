@@ -45,6 +45,7 @@
 #include "cameras/realisticDiffraction.h"
 #include "cameras/idealDiffraction.h"
 #include "cameras/perspectiveDiffraction.h"
+#include "cameras/pinhole.h"
 #include "film/spectralImage.h"
 // Ben
 #include "film/image.h"
@@ -620,6 +621,8 @@ Camera *MakeCamera(const string &name,
     	camera = CreateRealisticDiffractionCamera(paramSet, animatedCam2World, film);
     else if (name == "idealDiffraction")   //Andy added for lens ray tracing
     	camera = CreateIdealDiffractionCamera(paramSet, animatedCam2World, film);    //Andy added for lens ray tracing
+    else if (name == "pinhole")   //Andy added for lens ray tracing
+    	camera = CreatePinholeCamera(paramSet, animatedCam2World, film);    //Andy added for lens ray tracing
     else
         Warning("Camera \"%s\" unknown.", name.c_str());
     paramSet.ReportUnused();
