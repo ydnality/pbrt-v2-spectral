@@ -48,6 +48,10 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
        
        float xOffset = params.FindOneFloat("x_aperture_offset", 0);
        float yOffset = params.FindOneFloat("y_aperture_offset", 0);
+       
+       float pinholeExitApX = params.FindOneFloat("pinhole_exit_x", -1);
+       float pinholeExitApY = params.FindOneFloat("pinhole_exit_y", -1);
+	   float pinholeExitApZ = params.FindOneFloat("pinhole_exit_z", -1);
 
 	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
 
@@ -68,7 +72,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
-	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset);
+	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ);
 }
 
 
@@ -85,7 +89,10 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                  bool diffractFlag,
                                  bool chromaticFlag,
                                  float xOffset,
-                                 float yOffset)
+                                 float yOffset,
+                                 float pinholeExitXIn,
+                                 float pinholeExitYIn,
+                                 float pinholeExitZIn)
                                  : Camera(cam2world, sopen, sclose, f),
 								   ShutterOpen(sopen),
 								   ShutterClose(sclose),
@@ -104,12 +111,19 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     xApertureOffset = xOffset;
     yApertureOffset = yOffset;
     curveRadius = curveradius;
+    pinholeExitX = pinholeExitXIn;
+    pinholeExitY = pinholeExitYIn;
+    pinholeExitZ = pinholeExitZIn;
 
     std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
     std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
     std::cout <<"DiffractionEnabled: " << diffractionEnabled << "\n";
     std::cout <<"chromaticAberrationEnabled: " << chromaticAberrationEnabled << "\n";
 
+	std::cout <<"pinholeExitApX: " << pinholeExitX << "\n";
+	std::cout <<"pinholeExitApY: " << pinholeExitY << "\n";
+	std::cout <<"pinholeExitApX: " << pinholeExitX << "\n";
+	
     vector<float> vals;
 
     //check to see if there is valid input in the lens file.
@@ -381,8 +395,6 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     float firstAperture = lensEls[lensEls.size()-1].aperture/2;
     float firstRadius = lensEls[lensEls.size()-1].radius;
 
-
-
     //special case for when aperture is 1st element
     float zIntercept = 0;
     if (firstRadius ==0)
@@ -407,7 +419,17 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     //lensV = 0;
 
     //vdb visualize sampling surface
+
+
+    
     Point pointOnLens = Point(lensU, lensV, zIntercept);   //can we even assume that lens is a flat disk, maybe this has problems later?
+    
+	//special case when we have an offset pinhole 
+	if(pinholeExitX != -1 && pinholeExitY != -1 && pinholeExitZ != -1)
+	{
+		pointOnLens = Point(pinholeExitX, pinholeExitY, pinholeExitZ);
+	}    
+    
    float tempWavelength = ray->wavelength; 
     *ray = Ray(Point(0,0,0), Normalize(Vector(startingPoint)), 0.f, INFINITY);
     ray->o = startingPoint;    //initialize ray origin

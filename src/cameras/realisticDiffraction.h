@@ -29,7 +29,10 @@ public:
       bool diffractionFlag,
       bool chromaticFlag,
       float xOffset,
-      float yOffset);
+      float yOffset,
+      float pinholeExitXIn,
+      float pinholeExitYIn,
+      float pinholeExitZIn);
 
       
    ~RealisticDiffractionCamera();
@@ -47,6 +50,9 @@ private:
    float filmDistance;
    float xApertureOffset;
    float yApertureOffset;
+   float pinholeExitX;
+   float pinholeExitY;
+   float pinholeExitZ;
    gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
