@@ -52,6 +52,8 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
        float pinholeExitApX = params.FindOneFloat("pinhole_exit_x", -1);
        float pinholeExitApY = params.FindOneFloat("pinhole_exit_y", -1);
 	   float pinholeExitApZ = params.FindOneFloat("pinhole_exit_z", -1);
+	   float filmcenterX = params.FindOneFloat("film_center_x", 0);
+	   float filmcenterY = params.FindOneFloat("film_center_y", 0);
 
 	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
 
@@ -72,7 +74,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
-	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ);
+	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY);
 }
 
 
@@ -92,7 +94,9 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                  float yOffset,
                                  float pinholeExitXIn,
                                  float pinholeExitYIn,
-                                 float pinholeExitZIn)
+                                 float pinholeExitZIn,
+                                 float filmCenterXIn,
+                                 float filmCenterYIn)
                                  : Camera(cam2world, sopen, sclose, f),
 								   ShutterOpen(sopen),
 								   ShutterClose(sclose),
@@ -114,6 +118,8 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     pinholeExitX = pinholeExitXIn;
     pinholeExitY = pinholeExitYIn;
     pinholeExitZ = pinholeExitZIn;
+	filmCenterX = filmCenterXIn;
+	filmCenterY = filmCenterYIn;
 
     std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
     std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
@@ -123,6 +129,9 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 	std::cout <<"pinholeExitApX: " << pinholeExitX << "\n";
 	std::cout <<"pinholeExitApY: " << pinholeExitY << "\n";
 	std::cout <<"pinholeExitApX: " << pinholeExitX << "\n";
+	std::cout <<"filmCenterX: " << filmCenterX << "\n";
+	std::cout <<"filmCenterY: " << filmCenterY << "\n";
+	
 	
     vector<float> vals;
 
@@ -366,10 +375,10 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
     float width = filmDiag /sqrt((1.f + 1.f/(aspectRatio * aspectRatio)));  
     float height = width/aspectRatio;
     
-    startingPoint.x *= width/2.f;
-    startingPoint.y *= height/2.f;
+    startingPoint.x = startingPoint.x * width/2.f + filmCenterX;
+    startingPoint.y = startingPoint.y * height/2.f + filmCenterY;
 
-	//curved Sensor stuff	
+	//curved Sensor stuff - sensor offset with sperical sensors still needs to be evaluated
 	if (curveRadius != 0)
 	{
 		//convert to angle

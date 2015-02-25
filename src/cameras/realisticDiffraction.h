@@ -32,7 +32,9 @@ public:
       float yOffset,
       float pinholeExitXIn,
       float pinholeExitYIn,
-      float pinholeExitZIn);
+      float pinholeExitZIn,
+      float filmCenterXIn,
+      float filmCenterYIn);
 
       
    ~RealisticDiffractionCamera();
@@ -53,6 +55,8 @@ private:
    float pinholeExitX;
    float pinholeExitY;
    float pinholeExitZ;
+   float filmCenterX;
+   float filmCenterY;
    gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
