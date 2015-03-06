@@ -54,6 +54,13 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 	   float pinholeExitApZ = params.FindOneFloat("pinhole_exit_z", -1);
 	   float filmcenterX = params.FindOneFloat("film_center_x", 0);
 	   float filmcenterY = params.FindOneFloat("film_center_y", 0);
+	   
+	   int numPinholesW = (int) params.FindOneFloat("num_pinholes_w", -1);
+	   int numPinholesH = (int) params.FindOneFloat("num_pinholes_h", -1);
+	   
+	   
+	     
+	   
 
 	   //float focallength = params.FindOneFloat("focal_length", 50.0);  //andy: this is wrong... put this in the file for the lens
 
@@ -74,7 +81,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
-	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY);
+	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY, numPinholesW, numPinholesH);
 }
 
 
@@ -96,7 +103,9 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                  float pinholeExitYIn,
                                  float pinholeExitZIn,
                                  float filmCenterXIn,
-                                 float filmCenterYIn)
+                                 float filmCenterYIn,
+                                 int numPinholesWIn,
+                                 int numPinholesHIn)
                                  : Camera(cam2world, sopen, sclose, f),
 								   ShutterOpen(sopen),
 								   ShutterClose(sclose),
@@ -120,6 +129,8 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
     pinholeExitZ = pinholeExitZIn;
 	filmCenterX = filmCenterXIn;
 	filmCenterY = filmCenterYIn;
+	numPinholesW = numPinholesWIn;
+	numPinholesH = numPinholesHIn;
 
     std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
     std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
@@ -131,10 +142,12 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 	std::cout <<"pinholeExitApX: " << pinholeExitX << "\n";
 	std::cout <<"filmCenterX: " << filmCenterX << "\n";
 	std::cout <<"filmCenterY: " << filmCenterY << "\n";
-	
+	std::cout <<"numPinholesW: " << numPinholesW << "\n";
+	std::cout <<"numPinholesH: " << numPinholesH << "\n";		
 	
     vector<float> vals;
-
+	float lastAperture = 0;
+	
     //check to see if there is valid input in the lens file.
     if (!ReadFloatFile(fn.c_str(), &vals)) {
         Warning("Unable to read lens file!");
@@ -168,7 +181,10 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
         if (currentLensEl.radius ==0)
             currentLensEl.aperture = aperture_diameter_;
         lensEls.push_back(currentLensEl);
+        lastAperture = currentLensEl.aperture;  //
     }   
+    
+    
 
     for (int i = lensEls.size()-1; i >=0 ; i--)
     {   
@@ -190,7 +206,62 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
        r = gsl_rng_alloc (T);
 
 
-    //TODO: TELL FILM THAT THIS IS DEPTH MAP PROCESSING
+    //set up pinholes
+	//then figure out the film distance needed to satisfy this constraint.  
+	   
+	   // we solved for this algebraically/using similar triangles
+	   // we are assuming a square sensor for now
+	   if (numPinholesW > 0 && numPinholesH > 0)
+	   {
+	   
+	   		float sPixPitch = getSensorWidth()/((float)numPinholesW);
+	   		float pinholeArrayDistance = sPixPitch * filmDistance/(lastAperture + sPixPitch);	  
+	   		std::cout << "superpixel pitch: " << sPixPitch << "\n";
+	   		std::cout << "pinholeArrayDistance: " << pinholeArrayDistance << "\n"; 	
+	   		
+	   		//loop through all the pinhole locations and figure out the coordinates
+	   		//store the pinhole locations in a matrix
+	   		
+	   		float pinholePosition = -filmDistance + pinholeArrayDistance;
+	   		pinholeArray = new Point*[numPinholesW];
+	   		
+	   		for (int i = 0; i < numPinholesW; i++)
+	   		{
+	   			pinholeArray[i] = new Point[numPinholesH];
+	   			for (int j = 0; j < numPinholesH; j++)
+	   			{
+	   				Point centerPos;
+	   				centerPos.x = -(i - numPinholesW/2.0 + .5) * sPixPitch;
+	   				centerPos.y = (j- numPinholesH/2.0 + .5) * sPixPitch;
+	   				centerPos.z = -filmDistance;  //pbrt handedness is film is negative, scene positive
+	   				
+	   				Point lensCenter(0,0,0); //this is assuming the lens is centered here!
+	   				
+	   				Vector chiefRayDir;
+	   				chiefRayDir = lensCenter -  centerPos;
+	   				chiefRayDir = Normalize(chiefRayDir);
+	   				
+	   				float tHit = pinholePosition/chiefRayDir.z;
+	   				
+	   				Point currentPinhole;
+	   				currentPinhole.x = tHit * chiefRayDir.x;
+	   				currentPinhole.y = tHit * chiefRayDir.y;
+	   				currentPinhole.z = pinholePosition;
+	   				pinholeArray[i][j] = currentPinhole; 
+	   				
+	   				std::cout << "x: " << pinholeArray[i][j].x << " ";
+	   				std::cout << "y: " << pinholeArray[i][j].y << " ";
+	   				std::cout << "z: " << pinholeArray[i][j].z << "\t";
+	   			}
+	   			std::cout <<"\n";
+	   		}
+	   }
+	   
+	   //are all configurations possible??? yes - if we keep the constraint of angular res. vs spatial res. intact!
+	   
+	   
+	   //divide the sensor into equal superpixels (something easy, such as integer division)
+	   //make a matrix of superpixels pinhole centers, which contains the center positions of pinholes
 
 
 }
@@ -438,6 +509,42 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 	{
 		pointOnLens = Point(pinholeExitX, pinholeExitY, pinholeExitZ);
 	}    
+    
+    //special case when we have a pinhole array
+    if(numPinholesW >0 && numPinholesH >0)
+    {
+    	//determine which pinhole to trace to
+    	
+    	int numPixelsPerPinholeW = film->xResolution/numPinholesW;  //figure out number of pixels per superpixel in both dirs
+    	int numPixelsPerPinholeH = film->yResolution/numPinholesH;
+    	
+    	int xPinhole = (int)((sample.imageX/numPixelsPerPinholeW));
+    	int yPinhole = (int)((sample.imageY/numPixelsPerPinholeH));
+    	
+    	if (xPinhole >= (numPinholesW - 1))
+    		xPinhole = numPinholesW - 1;
+    	else if (xPinhole < 0)
+    		xPinhole = 0;
+    		
+    	if (yPinhole >= (numPinholesH - 1))
+    		yPinhole = numPinholesH - 1;
+    	else if (yPinhole < 0)
+    		yPinhole = 0;
+    		
+    	//std::cout <<"numPixsPerPinholeW" << numPixelsPerPinholeW << "\n";
+    	//std::cout << "numPixsPerPinholeH" << numPixelsPerPinholeH << "\n";
+    	
+    	//std::cout <<"xPinhole" << xPinhole << "\t";
+    //	std::cout << "yPinhole" << yPinhole << "\n";
+   		//std::cout << "film->xResolution: " << film->xResolution << "\t" << film->yResolution << "\n";
+   		
+   		//std::cout <<"xsample: " << sample.imageX << " ysample" << sample.imageY << "\n";
+    	Point pinholeLocation = pinholeArray[xPinhole][yPinhole];
+    	pointOnLens = pinholeLocation;
+    	//std::cout << "pinholeLocation: " << pinholeLocation.x << " " << pinholeLocation.y << " " << pinholeLocation.z << "\n";
+    	//std::cout << "startingPoint: " << startingPoint.x << " " << startingPoint.y << " " << startingPoint.z << "\n";
+    
+    }
     
    float tempWavelength = ray->wavelength; 
     *ray = Ray(Point(0,0,0), Normalize(Vector(startingPoint)), 0.f, INFINITY);

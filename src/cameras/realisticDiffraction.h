@@ -34,7 +34,9 @@ public:
       float pinholeExitYIn,
       float pinholeExitZIn,
       float filmCenterXIn,
-      float filmCenterYIn);
+      float filmCenterYIn,
+      int numPinholesWIn,
+      int numPinholesHIn);
 
       
    ~RealisticDiffractionCamera();
@@ -57,6 +59,8 @@ private:
    float pinholeExitZ;
    float filmCenterX;
    float filmCenterY;
+   int numPinholesW;
+   int numPinholesH;
    gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
@@ -65,6 +69,7 @@ private:
    bool chromaticAberrationEnabled;
    float fstop;
    float focalLength;
+   Point ** pinholeArray;
 
 ;
 };
