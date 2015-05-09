@@ -58,7 +58,8 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 	   int numPinholesW = (int) params.FindOneFloat("num_pinholes_w", -1);
 	   int numPinholesH = (int) params.FindOneFloat("num_pinholes_h", -1);
 	   
-	   
+	   bool microlensFlag = params.FindOneFloat("microlens_enabled", 0);
+	   //we need an additional microlens boolean mode
 	     
 	   
 
@@ -81,7 +82,7 @@ RealisticDiffractionCamera *CreateRealisticDiffractionCamera(const ParamSet &par
 
 	   return new RealisticDiffractionCamera(cam2world, hither, yon,
 	      shutteropen, shutterclose, filmdistance, apdiameter,
-	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY, numPinholesW, numPinholesH);
+	      specfile, filmdiag, curveradius, film, diffractFlag, chromaticFlag, xOffset, yOffset, pinholeExitApX, pinholeExitApY, pinholeExitApZ, filmcenterX, filmcenterY, numPinholesW, numPinholesH, microlensFlag);
 }
 
 
@@ -105,7 +106,8 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
                                  float filmCenterXIn,
                                  float filmCenterYIn,
                                  int numPinholesWIn,
-                                 int numPinholesHIn)
+                                 int numPinholesHIn,
+                                 bool microlensFlagIn)
                                  : Camera(cam2world, sopen, sclose, f),
 								   ShutterOpen(sopen),
 								   ShutterClose(sclose),
@@ -131,6 +133,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 	filmCenterY = filmCenterYIn;
 	numPinholesW = numPinholesWIn;
 	numPinholesH = numPinholesHIn;
+	microlensFlag = microlensFlagIn;
 
     std::cout <<"xApertureOffset: " << xApertureOffset << "\n";
     std::cout <<"yApertureOffset: " << yApertureOffset << "\n";
@@ -143,7 +146,8 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 	std::cout <<"filmCenterX: " << filmCenterX << "\n";
 	std::cout <<"filmCenterY: " << filmCenterY << "\n";
 	std::cout <<"numPinholesW: " << numPinholesW << "\n";
-	std::cout <<"numPinholesH: " << numPinholesH << "\n";		
+	std::cout <<"numPinholesH: " << numPinholesH << "\n";
+	std::cout <<"microlensFlag: " << microlensFlag << "\n";		
 	
     vector<float> vals;
 	float lastAperture = 0;
@@ -231,7 +235,7 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 	   			for (int j = 0; j < numPinholesH; j++)
 	   			{
 	   				Point centerPos;
-	   				centerPos.x = -(i - numPinholesW/2.0 + .5) * sPixPitch;
+	   				centerPos.x = -(i - numPinholesW/2.0 + .5) * sPixPitch;  //potential rounding problems here?
 	   				centerPos.y = (j- numPinholesH/2.0 + .5) * sPixPitch;
 	   				centerPos.z = -filmDistance;  //pbrt handedness is film is negative, scene positive
 	   				
@@ -244,14 +248,22 @@ RealisticDiffractionCamera::RealisticDiffractionCamera(const AnimatedTransform &
 	   				float tHit = pinholePosition/chiefRayDir.z;
 	   				
 	   				Point currentPinhole;
-	   				currentPinhole.x = tHit * chiefRayDir.x;
+	   				currentPinhole.x = tHit * chiefRayDir.x;   //ray originates at the lens center, and is traced back
 	   				currentPinhole.y = tHit * chiefRayDir.y;
+	   				
+	   				//currentPinhole.x = tHit * chiefRayDir.x + centerPos.x;
+	   				//currentPinhole.y = tHit * chiefRayDir.y + centerPos.y;
+	   				
 	   				currentPinhole.z = pinholePosition;
 	   				pinholeArray[i][j] = currentPinhole; 
 	   				
 	   				std::cout << "x: " << pinholeArray[i][j].x << " ";
 	   				std::cout << "y: " << pinholeArray[i][j].y << " ";
 	   				std::cout << "z: " << pinholeArray[i][j].z << "\t";
+	   				
+	   				//check for microlenses... 
+	   				//calculate microlens specs
+	   				
 	   			}
 	   			std::cout <<"\n";
 	   		}
@@ -303,12 +315,46 @@ void RealisticDiffractionCamera::runLensFlare(const Scene * scene, const Rendere
     
 }
 
-bool RealisticDiffractionCamera::IntersectLensEl(const Ray &r, float *tHit, float radius, float dist, Vector & normalVec) const{
+void RealisticDiffractionCamera::applySnellsLaw(float n1, float n2, float lensRadius, Vector &normalVec, Ray * ray ) const
+{
+
+    //lens overall aperture case
+    if (n1 == 0)
+        n1 = 1;   
+    if (n2 ==0)
+        n2 = 1;
+
+    //add chromatic abberation effect (changing index of refraction) here - basic for now
+    if (chromaticAberrationEnabled)
+    {
+       // std::cout << "ray->wavelength: " << ray->wavelength << "\n";
+        if (n1 != 1)
+            n1 = (ray->wavelength - 550) * -.04/(300)  +  n1;              //should be .04     
+        if (n2 != 1)
+            n2 = (ray->wavelength - 550) * -.04/(300)  +  n2;
+    }
+
+    Vector s1 = ray->d;
+    if (lensRadius >0)
+        normalVec = -normalVec;
+
+    float radicand = 1 - (n1/n2) * (n1/n2) * Dot(Cross(normalVec, s1), Cross(normalVec, s1));
+    if (radicand < 0)
+        ray->d = Vector(0, 0,0); //return 0;   //reflection, no refraction - might want to change for lens flare!
+
+    Vector s2 = n1/n2 * (Cross(normalVec, Cross(-1 * normalVec, s1))) - normalVec * sqrt(radicand);
+    //ray->d = normalVec;
+    //reinitialize ray->o
+    ray->d = Normalize(s2);  //reassign the direction to the new direction
+}
+
+bool RealisticDiffractionCamera::IntersectLensEl(const Ray &r, float *tHit, float radius, Vector dist, Vector & normalVec) const{
     float phi;
     Point phit;
     // Transform _Ray_ to object space
 
-    Transform shiftZ =  Translate(Vector(0,0,radius - dist));
+	Transform shiftZ =  Translate(dist);
+    //Transform shiftZ =  Translate(Vector(0,0,radius - dist));
     Ray ray = r;
     (shiftZ)(r, &ray);
     //(*WorldToObject)(r, &ray);
@@ -343,6 +389,7 @@ bool RealisticDiffractionCamera::IntersectLensEl(const Ray &r, float *tHit, floa
     if (phit.x == 0.f && phit.y == 0.f) phit.x = 1e-5f * radius;
     phi = atan2f(phit.y, phit.x);
     if (phi < 0.) phi += 2.f*M_PI;
+    
 //std::cout << "got here2!";
     // Test sphere intersection against clipping parameters
     //we don't need this test for now -> assume lens is within clipping parameters
@@ -425,8 +472,6 @@ float RealisticDiffractionCamera::getSensorWidth()
 
 float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *ray) const
 {
-  // YOUR CODE HERE -- make that ray!
-
   // use sample->imageX and sample->imageY to get raster-space coordinates
   // of the sample point on the film.
   // use sample->lensU and sample->lensV to get a sample position on the lens
@@ -435,8 +480,12 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 
     Point startingPoint;
 //std::cout << "imageX: " << sample.imageX << "imageY: " << sample.imageY << "\n";
-    startingPoint.x = -(sample.imageX - film->xResolution/2.f)/(film->xResolution/2.f);
-    startingPoint.y = (sample.imageY - film->yResolution/2.f)/(film->yResolution/2.f);
+   // startingPoint.x = -(sample.imageX -2 - film->xResolution/2.f + .5)/(film->xResolution/2.f);
+   // startingPoint.y = (sample.imageY-2 - film->yResolution/2.f + .5)/(film->yResolution/2.f);
+    
+    startingPoint.x = -((sample.imageX) - film->xResolution/2.f - .25)/(film->xResolution/2.f);  //potential rounding/alignment problem here
+    startingPoint.y = ((sample.imageY) - film->yResolution/2.f - .25)/(film->yResolution/2.f);
+    
     startingPoint.z = -filmDistance;  
     
 //cout << "startingPoint.z: " << startingPoint.z;
@@ -491,16 +540,15 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 
     //TODO: adjust first aperture depending on if we are using depth-map mode or NOT
 
+	float lensUNoScale = lensU;
+	float lensVNoScale = lensV;
+	float microlensAperture = 1;  //the aperture for the microlens.  Should be the same size as superpixel pitch.  
+	float superpixelPitch = 0;    //pitch in mm of the superpixels (a super pixel constitutes the collection of pixels behind 1 pinhole/microlens)
+	int xPinhole = 0;
+	int yPinhole = 0;
+   
     lensU *= firstAperture;
     lensV *= firstAperture;
-
-    //experiment - pinhole initial aperture! - put back in later
-    //lensU = 0;
-    //lensV = 0;
-
-    //vdb visualize sampling surface
-
-
     
     Point pointOnLens = Point(lensU, lensV, zIntercept);   //can we even assume that lens is a flat disk, maybe this has problems later?
     
@@ -511,80 +559,327 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
 	}    
     
     //special case when we have a pinhole array
-    if(numPinholesW >0 && numPinholesH >0)
+    else if(numPinholesW >0 && numPinholesH >0)
     {
     	//determine which pinhole to trace to
     	
     	int numPixelsPerPinholeW = film->xResolution/numPinholesW;  //figure out number of pixels per superpixel in both dirs
     	int numPixelsPerPinholeH = film->yResolution/numPinholesH;
     	
-    	int xPinhole = (int)((sample.imageX/numPixelsPerPinholeW));
-    	int yPinhole = (int)((sample.imageY/numPixelsPerPinholeH));
+    	xPinhole = (int)(((sample.imageX - .25 )/numPixelsPerPinholeW));    //figure out which pinhole we are under right now
+    	yPinhole = (int)(((sample.imageY - .25)/numPixelsPerPinholeH));    //same with y
     	
-    	if (xPinhole >= (numPinholesW - 1))
+    	if (xPinhole > (numPinholesW - 1))
+    	{
+    		 //for some weird reason... imageX starts at about 1 -> 721 ... why?  is this a pbrt bug?
+    		std::cout << "warning: xPinhole is out of range (too big)! " << xPinhole << " " << sample.imageX << "\n";
     		xPinhole = numPinholesW - 1;
+    	}
     	else if (xPinhole < 0)
+    	{
+    		std::cout << "warning: xPinhole is out of range (too small)!" << xPinhole << " " << sample.imageX << "\n";
     		xPinhole = 0;
-    		
-    	if (yPinhole >= (numPinholesH - 1))
+    	}	
+    	if (yPinhole > (numPinholesH - 1))
+    	{
+    		std::cout << "warning: yPinhole is out of range (too big)!\n";
     		yPinhole = numPinholesH - 1;
+    	}
     	else if (yPinhole < 0)
+    	{
+    		std::cout << "warning: yPinhole is out of range (too small)!\n";
     		yPinhole = 0;
-    		
+    	}	
     	//std::cout <<"numPixsPerPinholeW" << numPixelsPerPinholeW << "\n";
     	//std::cout << "numPixsPerPinholeH" << numPixelsPerPinholeH << "\n";
-    	
     	//std::cout <<"xPinhole" << xPinhole << "\t";
-    //	std::cout << "yPinhole" << yPinhole << "\n";
+    	//	std::cout << "yPinhole" << yPinhole << "\n";
    		//std::cout << "film->xResolution: " << film->xResolution << "\t" << film->yResolution << "\n";
-   		
    		//std::cout <<"xsample: " << sample.imageX << " ysample" << sample.imageY << "\n";
+   		
     	Point pinholeLocation = pinholeArray[xPinhole][yPinhole];
-    	pointOnLens = pinholeLocation;
-    	//std::cout << "pinholeLocation: " << pinholeLocation.x << " " << pinholeLocation.y << " " << pinholeLocation.z << "\n";
+    	
+    	//std::cout << "pinholeLocation: " << pinholeLocation.x << " " << pinholeLocation.y << " " << pinholeLocation.z << 			"\n";
     	//std::cout << "startingPoint: " << startingPoint.x << " " << startingPoint.y << " " << startingPoint.z << "\n";
     
+    
+    	//check for microlens boolean
+    	//change pointOnLens to be a rectangle at the entrance aperture of microlens
+    	if(microlensFlag)
+    	{
+    	
+    		//shoot rays through at the superpixel aperture
+    		superpixelPitch = width/numPinholesW;
+    		//float superpixelPitchH = height/numPinholesH; 
+    		
+    		//this isn't right... we need the pinhole pitch instead... but will do for now... TODO: fix!!...but it's close
+    		pointOnLens = Point(lensUNoScale * superpixelPitch/2.f + pinholeLocation.x, lensVNoScale * superpixelPitch/2.f+ pinholeLocation.y, pinholeLocation.z);   
+    		
+    		//pointOnLens = pinholeLocation;
+    	}
+    	else
+    	{ 
+    		pointOnLens = pinholeLocation;
+    	}
     }
     
-   float tempWavelength = ray->wavelength; 
+    //wanted focal length of microlenses right now .23739
+    //superpixel pitch: 0.106066
+    //assume these specs for now.  do on the fly calculations later!
+    
+    
+    
+    //SPECIAL CASE WHEN WE HAVE A MICROLENS ARRAY
+    //take sampleX and sampleY and scale them so they make up the square of microlens
+    //then, trace rays through the microlenses (should we use a function of some sort?)
+    
+    float tempWavelength = ray->wavelength; 
     *ray = Ray(Point(0,0,0), Normalize(Vector(startingPoint)), 0.f, INFINITY);
     ray->o = startingPoint;    //initialize ray origin
     ray->d = Normalize(pointOnLens - ray->o);
     ray->wavelength = tempWavelength;  //so that wavelength information is retained.
 
-        // vdb_color(.7, 0, 0);
-        // vdb_point(pointOnLens.x, pointOnLens.y, pointOnLens.z); 
+    // vdb_color(.7, 0, 0);
+    // vdb_point(pointOnLens.x, pointOnLens.y, pointOnLens.z); 
     
 
+	//trace through microlenses! (if necessary)
+	//the microlens has 2 spherical lens elements 
+	if (microlensFlag && numPinholesW >0 && numPinholesH >0)
+	{
+		//we assume an R of 0.3143 for a focal length of f = .23739.  calculate for real in further mod
+		
+		//float lensRadius = .3558;//0.3762; //.3191;  //calculated from matlab script s_s3dLFMicroLensCalculate.m
+		float currentAperture = superpixelPitch;
+
+		//these are example values for now.  we will compute them in a subsequent version
+		float microlensThickness = .01;   //mm
+		float microlensFilmDistance = filmDistance+pointOnLens.z;//.232; //.237; //mm
+		float microlensFocalLength = microlensFilmDistance + microlensThickness/2; //.237;//mm   //this is to be used for for ideal microlenses
+		
+		float microlensN = 1.67; //index of refraction of microlens
+		float oneOverR = (-2 * (microlensN-1) + sqrt(4 * pow(microlensN-1,2) + 
+		4 * pow(microlensN-1, 2) * microlensThickness/(microlensN * microlensFocalLength)))/(2 * pow((microlensN-1), 2) * microlensThickness/microlensN);
+		float lensRadius = 1/oneOverR; //solved for lens radius given focal length and mirolensN
+		float lensDistance = -filmDistance + microlensFilmDistance;     
+
+/*
+		std::cout <<"microlensFilmDistance: " << microlensFilmDistance <<"\n";
+		std::cout <<"microlensFocalLength: " << microlensFocalLength << "\n";
+		std::cout << "oneOverR: " << oneOverR << "\n";
+		std::cout << "lensRadius: " << lensRadius << "\n";*/
+		
+		Vector normalVec(0,0,1);
+        Point intersectPoint(0,0,0);
+        
+		ray->o = startingPoint;
+		
+		
+		/*
+		//use ideal microlenses for now to see if the problem is with lens aberrations, the code below, or even something else.  this is a sanity check
+		
+		//trace chief ray
+		Ray * centerRay = new Ray(Point(0,0,0), Normalize(Vector(startingPoint)), 0.f, INFINITY);
+		Point centerOfLens = Point(pinholeArray[xPinhole][yPinhole].x,pinholeArray[xPinhole][yPinhole].y,pinholeArray[xPinhole][yPinhole].z);
+		centerRay->o = startingPoint;
+		centerRay->d = Normalize(centerOfLens - startingPoint);
+		
+		centerRay->o = centerOfLens;  //put origin at origin (center of lens)
+		
+		//calculate chief ray intersection
+		
+		//use thin lens equation to compute new point of focus
+		//this is the distance to a point that is in focus.  all rays from a single point must converge at this distance.
+		float focalDistance = 0;  
+		float denominator = 1.f/microlensFocalLength - 1.f/microlensFilmDistance; 
+		if (abs(microlensFocalLength - microlensFilmDistance) < .00000000001f)   //protect against division by 0
+			focalDistance = 100000000000 * microlensFocalLength;
+		else
+			focalDistance = 1.f/denominator;
+			
+		focalDistance -= filmDistance;
+		
+		//compute point of focus in 3 space (world coordinates).
+		//first, compute t intersection with in focus plane - then position
+		float ft = focalDistance / centerRay->d.z;   
+		//Pfocus is the object point in world coordinates
+		Point Pfocus = (*centerRay)(ft);  //PBRT notation assigns point on a ray, if given the desired time
+
+		//intersectPoint is a point in world coordinates corresponding to where the ray hits the pupil plane
+		//Point intersectPoint;
+		//intersectPoint.x = lensU;
+		//intersectPoint.y = lensV;
+		//intersectPoint.z = 0;
+		
+		ray->o = pointOnLens;
+		ray->d = Normalize(Pfocus - pointOnLens);
+		
+		startingPoint = pointOnLens;
+		*/
+		
+		
+		//this loop is extremely similar to the one below.  However, to prevent me breaking the loop below, I made a separate one to decouple them for better debugging.  They can be combined in the future if you wish
+		//i = 0 case: first microlens element (closest to sensor;  i = 1 case: 2nd microlens element
+		
+		
+		for (int i = 0; i < 2; i++)
+		{
+			float dummy = 0;
+		    float *tHit;
+		    tHit = &dummy;
+		    bool intersected = false;
+		    Vector normalVec(0,0,1);
+		    Point intersectPoint(0,0,0);
+		    Point microlensCenter(pinholeArray[xPinhole][yPinhole].x, pinholeArray[xPinhole][yPinhole].y,lensDistance);
+		
+			lensRadius = -lensRadius;  //to account for the 2 opposite polarity radii 
+			
+			
+			ray->o = startingPoint;
+			
+			//we should change the lens position to the correct one (with the correct offset)
+			//we might consider making the next loop a while loop instead and incorporating all of this in there so that we don't need to remake everything... 
+			intersected = IntersectLensEl(*ray, tHit, lensRadius, Vector(-microlensCenter.x, -microlensCenter.y, lensRadius - lensDistance), normalVec);   //
+		
+			if (intersected)
+		    {
+		        intersectPoint.x = *tHit * ray->d.x + ray->o.x;
+		        intersectPoint.y = *tHit * ray->d.y + ray->o.y;
+		        intersectPoint.z = *tHit * ray->d.z + ray->o.z;
+
+		        //aperture test
+		        if ((intersectPoint.x - microlensCenter.x) * (intersectPoint.x - microlensCenter.x) + 
+		        	(intersectPoint.y - microlensCenter.y) * (intersectPoint.y - microlensCenter.y) >= (currentAperture * currentAperture) / (2 * 2))
+		            return 0.f;
+
+				//call Snell's Law Function
+				float n1 = 1;         
+		        float n2 = 1;
+		        
+		        if (i == 0)
+		        {
+		            n2 = microlensN;
+		        	lensDistance += microlensThickness;  
+		        }
+		        else
+		        	n1 = microlensN;
+		        	
+				applySnellsLaw( n1,  n2,  lensRadius, normalVec, ray );
+			
+		        //update starting point to current point
+		        startingPoint.x = intersectPoint.x;
+		        startingPoint.y = intersectPoint.y;
+		        startingPoint.z = intersectPoint.z;
+		    }
+		    
+		    
+		            // --------------------add effect of diffraction----------------
+
+		    if (diffractionEnabled)
+		    {
+
+		        double initx = 0;
+		        double inity = 0;       
+		        double * x = &initx;
+		        double * y = &inity;   
+		        //double currentAperture = lensRadius * 2;
+
+		        //calculate min distance direction
+		       
+		        //calculate radius
+		        //Point intersectPoint(lensU, lensV, 0.f);
+		        double radius = sqrt((intersectPoint.x - microlensCenter.x) * (intersectPoint.x - microlensCenter.x) + (intersectPoint.y - microlensCenter.y) * (intersectPoint.y - microlensCenter.y) );
+
+		//cout << "radius: " << radius << "\n";
+		//std::cout << "rayWavelength: " << ray->wavelength << "\n";
+
+		        //calculate direction 
+		        Vector direction(intersectPoint.x, intersectPoint.y, 0);
+		        
+		        Vector orthoDirection(-intersectPoint.y, intersectPoint.x, 0);  
+		                   // double direction = atan (intersectPoint.y/intersectPoint.x);
+		        
+		        double a = currentAperture/2 - radius;
+		        double b = sqrt((currentAperture/2 * currentAperture/2) - radius * radius);
+
+		        a = a;
+		        b = b;
+		        double pi = 3.14159265359;
+		        //double lambda = .000000550;  //550 nanometers for now
+		        double lambda = ray->wavelength * 1e-9;
+		        double sigma_x = atan(1/(sqrt(2) * a *.001 * 2 * pi/lambda)); 
+		        double sigma_y = atan(1/(sqrt(2) *b * .001 * 2 * pi/lambda)); 
+
+		        //gsl_ran_bivariate_gaussian (const gsl_rng * r, double sigma_x, double sigma_y, double rho, double * x, double * y)             
+		       gsl_ran_bivariate_gaussian (r, sigma_x, sigma_y, 0, x, y);    //experiment for now
+		               
+		        //add r.v. in directions of direction and orthoDirection
+
+		        //calculate component of these vectors based on 2 random degrees
+		        direction = Normalize(direction);
+		        orthoDirection = Normalize(orthoDirection);
+
+		        float noiseA = (float)(*x);
+		        float noiseB = (float)(*y);
+
+		         //project the original ray onto the new bases         
+		         double projA = (ray->d.x * direction.x + ray->d.y * direction.y)/sqrt(direction.x * direction.x + direction.y * direction.y);
+		         double projB = (ray->d.x * orthoDirection.x + ray->d.y * orthoDirection.y)/sqrt(orthoDirection.x * orthoDirection.x + orthoDirection.y * orthoDirection.y);
+		         double projC = ray->d.z;
+
+		         double rA = sqrt(projA * projA + projC * projC);
+		         double rB = sqrt(projB * projB + projC * projC);
+		         double thetaA = acos(projA/rA);          
+		         double thetaB = acos(projB/rB);
+
+		         //add uncertainty
+		         thetaA = thetaA + noiseA;   //removed for now
+		         thetaB = thetaB + noiseB;
+		         
+		         //convert angles back into cartesian coordinates, but in a,b space
+		         double newProjA = cos(thetaA) * rA;
+
+		         ray->d.z = sin(thetaA) * rA;
+
+		         projC = ray->d.z;
+		         rB = sqrt(projB * projB + projC * projC);
+		       
+		         //rB = sqrt(ray->d.y * ray->d.y + ray->d.z * ray->d.z); // THIS LINE IS WRONG!!!!! 
+
+		        //need to recalculate thetaB after you modify z (this is a new addition, also questionable)          
+		        thetaB = acos(projB/rB);
+
+		        double newProjB = cos(thetaB) * rB;
+		        ray->d.z = sin(thetaB) * rB;
+		    
+		        //convert from ab space back to x,y space
+		        ray->d.x = direction.x * newProjA + orthoDirection.x * newProjB;
+		        ray->d.y = direction.y * newProjA + orthoDirection.y * newProjB;
+
+		        ray->d = Normalize(ray->d);       
+		    }
+		    //------------end diffraction-----------------  
+		    
+		    
+        }
+		
+	}
+	
+	//trace through the regular lens elements! (non-microlens)
     float lensDistance = 0;
     for (int i = lensEls.size()-1; i>=0 ; i--)
     {
-
-//if (i == 5)  //this doesn't run!!
-//    std::cout << "i =0 ";
-
-//std::cout << "width: " << width << " height: " << height << "\n";
-//std::cout << "startX: " << startingPoint.x << " " << "startY: " << startingPoint.y << " ";
+		//std::cout << "width: " << width << " height: " << height << "\n";
+		//std::cout << "startX: " << startingPoint.x << " " << "startY: " << startingPoint.y << " ";
 
         //generate a uniform sample
-        //float lensRadius = -40;   //dummy value for now!! (mm)
         float lensRadius = lensEls[i].radius;   //(mm)
         lensDistance += lensEls[i].separation;
         float currentAperture = lensEls[i].aperture;
-        //float currentAperture = 10;
-
-// std::cout << "lensDistance: " << lensDistance << "\n";        
-        //lensDistance = 0;
-        
-        
-        // Compute point on plane of focus
-        //float focalDistance = 36.5;  //dummy value for now!
-        //float ft = focalDistance / ray->d.z;
-        //Point Pfocus = (*ray)(ft);
 
         ray->o = startingPoint;
-//std::cout << "ray->o: " << ray->o.x << " " << ray->o.y << " " << ray->o.z 
-//          << "ray->d: " << ray->d.x << " " << ray->d.y << " " << ray->d.z << "   ";
+		//std::cout << "ray->o: " << ray->o.x << " " << ray->o.y << " " << ray->o.z 
+		//          << "ray->d: " << ray->d.x << " " << ray->d.y << " " << ray->d.z << "   ";
         float dummy = 0;
         float *tHit;
         tHit = &dummy;
@@ -594,7 +889,7 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
         Vector normalVec(0,0,1);
         Point intersectPoint(0,0,0);
 
-        if (lensRadius ==0)
+        if (lensRadius ==0)   //this is the aperture case
         {
             float tAperture = 0;
             if (i == lensEls.size()-1)   
@@ -604,14 +899,9 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
             float xAperture = ray->o.x + ray->d.x * tAperture;
             float yAperture = ray->o.y + ray->d.y * tAperture;
             float zAperture = ray->o.z + ray->d.z * tAperture;
-//cout << "tAperture: " << tAperture << "\n";
-//cout << "xAperture: " << xAperture << "\n";
-//cout << "yAperture: " << yAperture << "\n";
-
+            
             if ((xAperture - xApertureOffset) * (xAperture - xApertureOffset) +  (yAperture - yApertureOffset) * (yAperture - yApertureOffset) > currentAperture * currentAperture * .25)
                 return 0.f;            
-            
-//(yAperture + 1)*(yAperture + 1)
 
             //intersected = true;
             lensRadius = 1000000;
@@ -622,32 +912,24 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
             startingPoint.x = intersectPoint.x;
             startingPoint.y = intersectPoint.y;
             startingPoint.z = intersectPoint.z;           
-     
-
-                //andy added in - unsure if this is needed - no.  this is not needed!
-                //ray->o = startingPoint;   
         }
-        else
+        else   //regular spherical lens elements
         {
-            intersected = IntersectLensEl(*ray, tHit, lensRadius, lensDistance, normalVec);   //these are just test values for now!
-        //}
+            intersected = IntersectLensEl(*ray, tHit, lensRadius, Vector(0, 0, lensRadius - lensDistance), normalVec); 
             if (intersected)
             {
-                //paint the intersection point green
-  
                 intersectPoint.x = *tHit * ray->d.x + ray->o.x;
                 intersectPoint.y = *tHit * ray->d.y + ray->o.y;
                 intersectPoint.z = *tHit * ray->d.z + ray->o.z;
 
-                //aperture test
-                if (intersectPoint.x * intersectPoint.x + intersectPoint.y * intersectPoint.y >= currentAperture * currentAperture / 4)
-                {
+                //aperture test (circular aperture) currentAperture is the aperture diameter
+                if (intersectPoint.x * intersectPoint.x + intersectPoint.y * intersectPoint.y >= currentAperture * currentAperture / 4.f)
                     return 0.f;
-                }
 
                 //vdb visualization
-    //std::cout << "*tHit: " << *tHit << "\n";
+    			//std::cout << "*tHit: " << *tHit << "\n";
                 float currentT = 0;
+                
                 /*
                 while (currentT < *tHit)
                 {
@@ -663,52 +945,19 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
                    // vdb_point(currentPoint.x, currentPoint.y, currentPoint.z);   
                     currentT += .5;     
                 }*/
-
-
                 //vdb_color(0, .7, 0);
                // vdb_point(intersectPoint.x, intersectPoint.y, intersectPoint.z); 
 
-                //-------------- snell's law----------------
-                float n1 = lensEls[i].n;  
+
+				//call Snell's Law Function
+				float n1 = lensEls[i].n;  
                        
-                float n2 = 1;
+                float n2 = 1;   //default case for n2 is 1 because that is air.  n2/n1 direction is like this....     n2----->|lens element---->n1 (n2 is previous surface n.. n1 is new surface)
                 if (i-1 >= 0)
                     n2 = lensEls[i-1].n;
-                
-                //lens overall aperture case
-                if (n1 == 0)
-                    n1 = 1;   
-                if (n2 ==0)
-                    n2 = 1;
-
-                //add chromatic abberation effect (changing index of refraction) here - basic for now
-                if (chromaticAberrationEnabled)
-                {
-                   // std::cout << "ray->wavelength: " << ray->wavelength << "\n";
-                    if (n1 != 1)
-                        n1 = (ray->wavelength - 550) * -.04/(300)  +  n1;              //should be .04     
-                    if (n2 != 1)
-                        n2 = (ray->wavelength - 550) * -.04/(300)  +  n2;
-                }
-
-                Vector s1 = ray->d;
-                if (lensRadius >0)
-                    normalVec = -normalVec;
-              
-
-                float radicand = 1 - (n1/n2) * (n1/n2) * Dot(Cross(normalVec, s1), Cross(normalVec, s1));
-                if (radicand < 0)
-                    return 0;   //reflection, no refraction - might want to change for lens flare!
-
-                Vector s2 = n1/n2 * (Cross(normalVec, Cross(-1 * normalVec, s1))) - normalVec * sqrt(radicand);
-                
-                //ray->d = normalVec;
-                //reinitialize ray->o
-                
-                ray->d = Normalize(s2);  //reassign the direction to the new direction
-
-                //---------------end snell's law------------
-
+				
+				applySnellsLaw( n1,  n2,  lensRadius, normalVec, ray );
+				
                 //update starting point to current point
                 startingPoint.x = intersectPoint.x;
                 startingPoint.y = intersectPoint.y;
@@ -717,9 +966,11 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
                 //ray->o = startingPoint;
             }
             else
-            {     
+            {      
                 //did not intersect -> draw red rays
                 float currentT = 0;
+                
+                //vdb
                 /*while (currentT < 10)
                 {
                     Point currentPoint(0,0,0);
@@ -772,8 +1023,8 @@ float RealisticDiffractionCamera::GenerateRay(const CameraSample &sample, Ray *r
             double pi = 3.14159265359;
             //double lambda = .000000550;  //550 nanometers for now
             double lambda = ray->wavelength * 1e-9;
-            double sigma_x = atan(1/(2 * a *.001 * 2 * pi/lambda)); 
-            double sigma_y = atan(1/(2 *b * .001 * 2 * pi/lambda)); 
+            double sigma_x = atan(1/(sqrt(2) * a *.001 * 2 * pi/lambda)); 
+            double sigma_y = atan(1/(sqrt(2) *b * .001 * 2 * pi/lambda)); 
 
             //gsl_ran_bivariate_gaussian (const gsl_rng * r, double sigma_x, double sigma_y, double rho, double * x, double * y)             
            gsl_ran_bivariate_gaussian (r, sigma_x, sigma_y, 0, x, y);    //experiment for now
