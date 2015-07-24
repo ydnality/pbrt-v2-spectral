@@ -29,7 +29,15 @@ public:
       bool diffractionFlag,
       bool chromaticFlag,
       float xOffset,
-      float yOffset);
+      float yOffset,
+      float pinholeExitXIn,
+      float pinholeExitYIn,
+      float pinholeExitZIn,
+      float filmCenterXIn,
+      float filmCenterYIn,
+      int numPinholesWIn,
+      int numPinholesHIn,
+      bool microlensFlagIn);
 
       
    ~RealisticDiffractionCamera();
@@ -39,6 +47,7 @@ public:
    float getFStop();
    float getFocalLength();
    float getSensorWidth();
+  
 private:
    float ShutterOpen;
    float ShutterClose;
@@ -47,14 +56,25 @@ private:
    float filmDistance;
    float xApertureOffset;
    float yApertureOffset;
+   float pinholeExitX;
+   float pinholeExitY;
+   float pinholeExitZ;
+   float filmCenterX;
+   float filmCenterY;
+   int numPinholesW;
+   int numPinholesH;
    gsl_rng * r;
    Film * film;
    vector<LensElement> lensEls;
-   bool IntersectLensEl(const Ray &r, float *tHit, float radius, float dist,  Vector & normalVec) const;
+   bool IntersectLensEl(const Ray &r, float *tHit, float radius, Vector dist,  Vector & normalVec) const;
+   void applySnellsLaw(float n1, float n2, float lensRadius, Vector &normalVec, Ray * ray ) const;
+
    bool diffractionEnabled;
    bool chromaticAberrationEnabled;
+   bool microlensFlag;
    float fstop;
    float focalLength;
+   Point ** pinholeArray;
 
 ;
 };
