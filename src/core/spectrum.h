@@ -33,10 +33,10 @@
 #include "parallel.h"
 
 // Spectrum Utility Declarations
-// BSH changed for 31 bands centered on 400 410 ... 690
+// 32 spectrum bands allows even division of 2^n samples
 static const int sampledLambdaStart = 400;
-static const int sampledLambdaEnd = 700;
-static const int nSpectralSamples = 31;
+static const int sampledLambdaEnd = 710;
+static const int nSpectralSamples = 32;
 
 extern bool SpectrumSamplesSorted(const float *lambda, const float *vals, int n);
 extern void SortSpectrumSamples(float *lambda, float *vals, int n);
