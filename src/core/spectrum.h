@@ -34,8 +34,9 @@
 
 // Spectrum Utility Declarations
 // 32 spectrum bands allows even division of 2^n samples
-static const int sampledLambdaStart = 400;
-static const int sampledLambdaEnd = 710;
+// center each band on round multiple of 10: 400, 410, 420, ... , 710
+static const int sampledLambdaStart = 395;
+static const int sampledLambdaEnd = 715;
 static const int nSpectralSamples = 32;
 
 extern bool SpectrumSamplesSorted(const float *lambda, const float *vals, int n);
